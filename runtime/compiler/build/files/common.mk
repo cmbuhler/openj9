@@ -384,6 +384,16 @@ JIT_PRODUCT_SOURCE_FILES+=\
     omr/compiler/runtime/OMRRuntimeAssumptions.cpp
 
 ifneq ($(J9VM_OPT_JITSERVER),)
+ifeq ($(PERSISTENT_LOGGER),MONGODB)
+    JIT_PRODUCT_SOURCE_FILES+=\
+    compiler/control/MongoLogger.cpp \
+    compiler/control/LoadDBLibs.cpp
+    endif
+ifeq ($(PERSISTENT_LOGGER),CASSANDRA)
+    JIT_PRODUCT_SOURCE_FILES+=\
+    compiler/control/CassandraLogger.cpp \
+    compiler/control/LoadDBLibs.cpp
+endif
 JIT_PRODUCT_SOURCE_FILES+=\
     compiler/control/JITClientCompilationThread.cpp \
     compiler/control/JITServerCompilationThread.cpp \

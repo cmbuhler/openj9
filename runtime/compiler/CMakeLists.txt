@@ -80,7 +80,7 @@ add_custom_command(
 )
 add_custom_target(j9jit_tracegen DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/env/ut_j9jit.h)
 
-# J9VM_OPT_JITSERVER and protobuf
+# J9VM_OPT_JITSERVER and protobuf and Persistent Loggers
 if(J9VM_OPT_JITSERVER)
 	message(STATUS "JITServer is supported")
 
@@ -132,6 +132,16 @@ if(J9VM_OPT_JITSERVER)
 	include(FindOpenSSL)
 	find_package(OpenSSL REQUIRED)
 	include_directories(${OPENSSL_INCLUDE_DIR})
+
+	#Check for environment variable enabling the persistent logger
+	if(${PERSISTENT_LOGGER} STREQUAL "MONGODB")
+		add_definitions(-DMONGO_LOGGER)
+		add_definitions(-DPERSISTENT_LOGGING_SUPPORT)
+	endif()
+	if(${PERSISTENT_LOGGER} STREQUAL "CASSANDRA")
+		add_definitions(-DCASSANDRA_LOGGER)
+		add_definitions(-DPERSISTENT_LOGGING_SUPPORT)
+	endif()
 endif()
 
 #TODO We should get rid of this, but its still required by the compiler_support module in omr
