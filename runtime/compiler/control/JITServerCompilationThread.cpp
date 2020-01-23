@@ -83,6 +83,15 @@ outOfProcessCompilationEnd(
    // Pack log file to send to client
    std::string logFileStr = TR::Options::packLogFile(comp->getOutFile());
 
+   // insert persistent logging implementation
+   uint64_t clientUID = entry->getClientUID();
+   if (comp-> getOption(TR_PersistLogging)) {
+      // need the client id 
+      // and the method name 
+      std::cout << "Persistent Logging enabled" << std::endl;
+      std::cout << "Found Client id: " << clientUID << endl;
+   }
+
    std::string svmSymbolToIdStr;
    if (comp->getOption(TR_UseSymbolValidationManager))
       {
