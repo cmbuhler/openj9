@@ -402,6 +402,13 @@ JIT_PRODUCT_SOURCE_FILES+=\
     compiler/runtime/JITServerIProfiler.cpp \
     compiler/runtime/JITServerStatisticsThread.cpp \
     compiler/runtime/Listener.cpp
+
+    ifeq ($(PERSISTENT_LOGGER),MONGODB)
+    JIT_PRODUCT_SOURCE_FILES+=compiler/control/MongoLogger.cpp
+    endif
+    ifeq ($(PERSISTENT_LOGGER),CASSANDRA)
+    JIT_PRODUCT_SOURCE_FILES+=compiler/control/CassandraLogger.cpp
+    endif
 endif
 
 -include $(JIT_MAKE_DIR)/files/extra.mk

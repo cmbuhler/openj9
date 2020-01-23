@@ -172,7 +172,7 @@ TR_ResolvedJ9JITServerMethod::definingClassFromCPFieldRef(TR::Compilation *comp,
       auto &cache = getJ9ClassInfo(compInfoPT, _ramClass)._fieldOrStaticDefiningClassCache;
       cache.insert({cpIndex, resolvedClass});
       }
-   
+
    return resolvedClass;
    }
 
@@ -2292,22 +2292,19 @@ TR_ResolvedRelocatableJ9JITServerMethod::startAddressForInterpreterOfJittedMetho
    {
    return ((J9Method *)getNonPersistentIdentifier())->extra;
    }
-
 TR_OpaqueClassBlock * 
 TR_ResolvedRelocatableJ9JITServerMethod::definingClassFromCPFieldRef(TR::Compilation *comp, int32_t cpIndex, bool isStatic)
    {
    TR_OpaqueClassBlock *resolvedClass = TR_ResolvedJ9JITServerMethod::definingClassFromCPFieldRef(comp, cpIndex, isStatic);
-   if (resolvedClass)
-      {
-      bool valid = false;
-      if (comp->getOption(TR_UseSymbolValidationManager))
-         valid = comp->getSymbolValidationManager()->addDefiningClassFromCPRecord(resolvedClass, cp(), cpIndex, isStatic);
-      else
-         valid = storeValidationRecordIfNecessary(comp, cp(), cpIndex, isStatic ? TR_ValidateStaticField : TR_ValidateInstanceField, ramMethod());
 
-      if (!valid)
-         resolvedClass = NULL;
-      }
+   bool valid = false;
+   if (comp->getOption(TR_UseSymbolValidationManager))
+      valid = comp->getSymbolValidationManager()->addDefiningClassFromCPRecord(resolvedClass, cp(), cpIndex, isStatic);
+   else
+      valid = storeValidationRecordIfNecessary(comp, cp(), cpIndex, isStatic ? TR_ValidateStaticField : TR_ValidateInstanceField, ramMethod());
+
+   if (!valid)
+      resolvedClass = NULL;
    return resolvedClass;
    }
 
