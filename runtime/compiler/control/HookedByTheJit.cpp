@@ -83,6 +83,9 @@
 #include "runtime/JITServerIProfiler.hpp"
 #include "runtime/JITServerStatisticsThread.hpp"
 #include "runtime/Listener.hpp"
+#if defined(MONGO_LOGGER)
+#include "control/LoadDBLibs.hpp"
+#endif // defined(MONGO_LOGGER)
 #endif
 
 extern "C" {
@@ -4760,6 +4763,9 @@ void JitShutdown(J9JITConfig * jitConfig)
       {
       statsThreadObj->stopStatisticsThread(jitConfig);
       }
+#if defined(MONGO_LOGGER)
+   Omongoc_cleanup();
+#endif // defined(MONGOLOGGER)
 #endif
 
    TR_DebuggingCounters::report();
