@@ -111,6 +111,9 @@
 #include "net/CommunicationStream.hpp"
 #include "net/ClientStream.hpp"
 #include "net/LoadSSLLibs.hpp"
+#if defined(PERSISTENT_LOGGING_SUPPORT)
+#include "control/LoadDBLibs.hpp"
+#endif //defined(PERSISTENT_LOGGING_SUPPORT)
 #include "runtime/JITClientSession.hpp"
 #include "runtime/Listener.hpp"
 #include "runtime/JITServerStatisticsThread.hpp"
@@ -1654,6 +1657,24 @@ onLoadInternal(
       if (!JITServer::loadLibsslAndFindSymbols())
          return -1;
       }
+#if defined(PERSISTENT_LOGGING_SUPPORT)
+//    TODO: Get Flag from CLIENT command line.
+//   if(TR::Options::getCmdLineOptions()->getOption(TR_PersistentLogging))
+//       {
+#if defined(MONGO_LOGGER)
+       if(!JITServer::loadLibmongocAndSymbols() || !JITServer::loadLibbsonAndSymbols() )
+           return -1;
+       if(!JITServer::is_mongoc_init)
+       {
+           Omongoc_init();
+           JITServer::is_mongoc_init = 1;
+       }
+#endif //defined(MONGO_LOGGER)
+#if defined(CASSANDRA_LOGGER)
+       //TODO: Dynamically load cassandra libraries
+#endif //defined(CASSANDRA_LOGGER)
+//       }
+#endif //defined(PERSISTENT_LOGGING_SUPPORT)
 
    if (compInfo->getPersistentInfo()->getRemoteCompilationMode() == JITServer::SERVER)
       {

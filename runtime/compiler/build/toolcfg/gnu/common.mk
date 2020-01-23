@@ -534,4 +534,18 @@ ifneq ($(J9VM_OPT_JITSERVER),)
         C_INCLUDES+=$(OPENSSL_DIR)
         CXX_INCLUDES+=$(OPENSSL_DIR)
     endif
+
+    ifeq ($(PERSISTENT_LOGGER),CASSANDRA)
+        SOLINK_SLINK+=cassandra
+        CXX_DEFINES+=CASSANDRA_LOGGER
+        CXX_DEFINES+=PERSISTENT_LOGGING_SUPPORT
+    endif
+    ifeq ($(PERSISTENT_LOGGER),MONGODB)
+        SOLINK_SLINK+=bsoncxx
+        SOLINK_SLINK+=mongocxx
+        CXX_DEFINES+=MONGO_LOGGER
+        CXX_DEFINES+=PERSISTENT_LOGGING_SUPPORT
+        CXX_INCLUDES+=/usr/include/mongocxx/v_noabi
+        CXX_INCLUDES+=/usr/include/bsoncxx/v_noabi
+    endif
 endif # J9VM_OPT_JITSERVER
