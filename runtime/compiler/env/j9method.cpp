@@ -65,6 +65,7 @@
 #include "env/JSR292Methods.h"
 #include "control/MethodToBeCompiled.hpp"
 
+
 #if defined(_MSC_VER)
 #include <malloc.h>
 #endif
@@ -1230,9 +1231,9 @@ TR_ResolvedJ9MethodBase::isCold(TR::Compilation * comp, bool isIndirectCall, TR:
    if ((!comp->getOption(TR_DisableDFP)) &&
        (
 #ifdef TR_TARGET_S390
-       TR::Compiler->target.cpu.getSupportsDecimalFloatingPointFacility() ||
+       comp->target().cpu.getSupportsDecimalFloatingPointFacility() ||
 #endif
-       TR::Compiler->target.cpu.supportsDecimalFloatingPoint()) && sym != NULL)
+       comp->target().cpu.supportsDecimalFloatingPoint()) && sym != NULL)
       {
       TR::MethodSymbol * methodSymbol = sym->getMethodSymbol();
       switch(methodSymbol->getRecognizedMethod())
@@ -1504,7 +1505,7 @@ TR_ResolvedRelocatableJ9Method::startAddressForJittedMethod()
 void *
 TR_ResolvedRelocatableJ9Method::startAddressForJNIMethod(TR::Compilation * comp)
    {
-#if defined(TR_TARGET_S390)  || defined(TR_TARGET_X86) || defined(TR_TARGET_POWER)
+#if defined(TR_TARGET_S390)  || defined(TR_TARGET_X86) || defined(TR_TARGET_POWER) || defined(TR_TARGET_ARM64)
    return TR_ResolvedJ9Method::startAddressForJNIMethod(comp);
 #else
    return NULL;
@@ -2177,9 +2178,9 @@ TR_ResolvedRelocatableJ9Method::createResolvedMethodFromJ9Method(TR::Compilation
       return NULL;
 
    if (comp->getOption(TR_DisableDFP) ||
-       (!(TR::Compiler->target.cpu.supportsDecimalFloatingPoint()
+       (!(comp->target().cpu.supportsDecimalFloatingPoint()
 #ifdef TR_TARGET_S390
-       || TR::Compiler->target.cpu.getSupportsDecimalFloatingPointFacility()
+       || comp->target().cpu.getSupportsDecimalFloatingPointFacility()
 #endif
          ) ||
           !TR_J9MethodBase::isBigDecimalMethod(j9method)))
@@ -3595,6 +3596,7 @@ void TR_ResolvedJ9Method::construct()
    static X ReflectionMethods[] =
       {
       {x(TR::sun_reflect_Reflection_getCallerClass, "getCallerClass", "(I)Ljava/lang/Class;")},
+      {x(TR::sun_reflect_Reflection_getCallerClass, "getCallerClass", "()Ljava/lang/Class;")},
       {x(TR::sun_reflect_Reflection_getClassAccessFlags, "getClassAccessFlags", "(Ljava/lang/Class;)I")},
       {  TR::unknownMethod}
       };
@@ -4340,6 +4342,7 @@ void TR_ResolvedJ9Method::construct()
    static Y class31[] =
       {
       { "com/ibm/jit/DecimalFormatHelper", DecimalFormatHelperMethods},
+      { "jdk/internal/reflect/Reflection", ReflectionMethods },
       { 0 }
       };
    static Y class32[] =
@@ -6267,7 +6270,7 @@ TR_ResolvedJ9Method::startAddressForJNIMethod(TR::Compilation * comp)
    if (isInterpreted())
       return (void*)((intptrj_t)address & ~J9_STARTPC_NOT_TRANSLATED);
 
-   return *(void * *)(TR::CompilationInfo::getJ9MethodExtra(ramMethod()) - (TR::Compiler->target.is64Bit() ? 12 : 8));
+   return *(void * *)(TR::CompilationInfo::getJ9MethodExtra(ramMethod()) - (comp->target().is64Bit() ? 12 : 8));
    }
 
 U_32
@@ -7787,11 +7790,13 @@ TR_J9ByteCodeIlGenerator::runFEMacro(TR::SymbolReference *symRef)
 #if defined(JITSERVER_SUPPORT)
          if (comp()->isOutOfProcessCompilation())
             {
+            std::vector<uintptrj_t> listOfOffsets;
+            if (!returnFromArchetype)
+               {
+               packReferenceChainOffsets(methodHandleExpression, listOfOffsets);
+               }
             auto stream = TR::CompilationInfo::getStream();
-            stream->write(JITServer::MessageType::runFEMacro_derefUintptrjPtr, thunkDetails->getHandleRef());
-            receiverHandle = std::get<0>(stream->read<uintptrj_t>());
-            methodHandle = returnFromArchetype ? receiverHandle : walkReferenceChain(methodHandleExpression, receiverHandle);
-            stream->write(JITServer::MessageType::runFEMacro_invokeILGenMacrosInvokeExactAndFixup, methodHandle);
+            stream->write(JITServer::MessageType::runFEMacro_invokeILGenMacrosInvokeExactAndFixup, thunkDetails->getHandleRef(), listOfOffsets);
             auto recv = stream->read<std::string>();
             std::string methodDescriptorString = std::get<0>(recv);
             methodDescriptorLength = methodDescriptorString.length();
@@ -8322,7 +8327,7 @@ TR_J9ByteCodeIlGenerator::runFEMacro(TR::SymbolReference *symRef)
 
          TR::SymbolReference *extraField = comp()->getSymRefTab()->findOrCreateJ9MethodExtraFieldSymbolRef(offsetof(struct J9Method, extra));
          TR::Node *j9methodAddress = pop();
-         if (TR::Compiler->target.is64Bit())
+         if (comp()->target().is64Bit())
             j9methodAddress = TR::Node::create(TR::l2a, 1, j9methodAddress);
          else
             j9methodAddress = TR::Node::create(TR::i2a, 1, TR::Node::create(TR::l2i, 1, j9methodAddress));
@@ -8332,10 +8337,10 @@ TR_J9ByteCodeIlGenerator::runFEMacro(TR::SymbolReference *symRef)
             {
             case TR::java_lang_invoke_DirectHandle_isAlreadyCompiled:
                {
-               TR::ILOpCodes xcmpeq = TR::Compiler->target.is64Bit()? TR::lcmpeq : TR::icmpeq;
-               TR::ILOpCodes xand   = TR::Compiler->target.is64Bit()? TR::land   : TR::iand;
-               TR::Node *zero = TR::Compiler->target.is64Bit()? TR::Node::lconst(extra, 0) : TR::Node::iconst(extra, 0);
-               TR::Node *mask = TR::Compiler->target.is64Bit()? TR::Node::lconst(extra, J9_STARTPC_NOT_TRANSLATED) : TR::Node::iconst(extra, J9_STARTPC_NOT_TRANSLATED);
+               TR::ILOpCodes xcmpeq = comp()->target().is64Bit()? TR::lcmpeq : TR::icmpeq;
+               TR::ILOpCodes xand   = comp()->target().is64Bit()? TR::land   : TR::iand;
+               TR::Node *zero = comp()->target().is64Bit()? TR::Node::lconst(extra, 0) : TR::Node::iconst(extra, 0);
+               TR::Node *mask = comp()->target().is64Bit()? TR::Node::lconst(extra, J9_STARTPC_NOT_TRANSLATED) : TR::Node::iconst(extra, J9_STARTPC_NOT_TRANSLATED);
                result =
                   TR::Node::create(xcmpeq, 2,
                      TR::Node::create(xand, 2, extra, mask),
@@ -8343,7 +8348,7 @@ TR_J9ByteCodeIlGenerator::runFEMacro(TR::SymbolReference *symRef)
                }
                break;
             case TR::java_lang_invoke_DirectHandle_compiledEntryPoint:
-               if (TR::Compiler->target.cpu.isI386())
+               if (comp()->target().cpu.isI386())
                   {
                   // IA32 does not store jitEntryOffset in the linkageInfo word
                   // so it would be incorrect to try to load it from there.
@@ -8354,10 +8359,10 @@ TR_J9ByteCodeIlGenerator::runFEMacro(TR::SymbolReference *symRef)
                else
                   {
                   TR::SymbolReference *linkageInfoSymRef = comp()->getSymRefTab()->findOrCreateStartPCLinkageInfoSymbolRef(-4);
-                  TR::ILOpCodes x2a = TR::Compiler->target.is64Bit()? TR::l2a : TR::i2a;
+                  TR::ILOpCodes x2a = comp()->target().is64Bit()? TR::l2a : TR::i2a;
                   TR::Node *linkageInfo    = TR::Node::createWithSymRef(TR::iloadi, 1, 1, TR::Node::create(x2a, 1, extra), linkageInfoSymRef);
                   TR::Node *jitEntryOffset = TR::Node::create(TR::ishr,   2, linkageInfo, TR::Node::iconst(extra, 16));
-                  if (TR::Compiler->target.is64Bit())
+                  if (comp()->target().is64Bit())
                      result = TR::Node::create(TR::ladd, 2, extra, TR::Node::create(TR::i2l, 1, jitEntryOffset));
                   else
                      result = TR::Node::create(TR::iadd, 2, extra, jitEntryOffset);
@@ -8625,6 +8630,24 @@ TR_J9ByteCodeIlGenerator::runFEMacro(TR::SymbolReference *symRef)
 
          uintptrj_t methodHandle;
          uintptrj_t argumentIndices;
+
+#if defined(JITSERVER_SUPPORT)
+         if (comp()->isOutOfProcessCompilation())
+            {
+            auto stream = TR::CompilationInfo::getStream();
+            stream->write(JITServer::MessageType::runFEMacro_invokeFilterArgumentsWithCombinerHandleArgumentIndices, thunkDetails->getHandleRef());
+
+            auto recv = stream->read<int32_t, std::vector<int32_t>>();
+            int32_t arrayLength = std::get<0>(recv);
+            std::vector<int32_t> argIndices = std::get<1>(recv);
+            // Push the indices in reverse order
+            for (int i = arrayLength - 1; i >= 0; i--) {
+               loadConstant(TR::iconst, argIndices[i]);
+            }
+            loadConstant(TR::iconst, arrayLength); // number of arguments
+            }
+         else
+#endif /* defined(JITSERVER_SUPPORT) */
             {
             TR::VMAccessCriticalSection invokeFilterArgumentsWithCombinerHandle(fej9);
             methodHandle = *thunkDetails->getHandleRef();
@@ -8678,6 +8701,16 @@ TR_J9ByteCodeIlGenerator::runFEMacro(TR::SymbolReference *symRef)
 
          uintptrj_t methodHandle;
          int32_t filterPosition;
+
+#if defined(JITSERVER_SUPPORT)
+         if (comp()->isOutOfProcessCompilation())
+            {
+            auto stream = TR::CompilationInfo::getStream();
+            stream->write(JITServer::MessageType::runFEMacro_invokeFilterArgumentsWithCombinerHandleFilterPosition, thunkDetails->getHandleRef());
+            filterPosition = std::get<0>(stream->read<int32_t>());
+            }
+         else
+#endif /* defined(JITSERVER_SUPPORT) */
             {
             TR::VMAccessCriticalSection invokeFilterArgumentsWithCombinerHandle(fej9);
             methodHandle = *thunkDetails->getHandleRef();
@@ -8783,6 +8816,17 @@ TR_J9ByteCodeIlGenerator::runFEMacro(TR::SymbolReference *symRef)
          int32_t numArguments;
          int32_t filterPos;
 
+#if defined(JITSERVER_SUPPORT)
+         if (comp()->isOutOfProcessCompilation())
+            {
+            auto stream = TR::CompilationInfo::getStream();
+            stream->write(JITServer::MessageType::runFEMacro_invokeFilterArgumentsWithCombinerHandleNumSuffixArgs, thunkDetails->getHandleRef());
+            auto recv = stream->read<int32_t, int32_t>();
+            numArguments = std::get<0>(recv);
+            filterPos = std::get<1>(recv);
+            }
+         else
+#endif /* defined(JITSERVER_SUPPORT) */
             {
             TR::VMAccessCriticalSection invokeFilterArgumentsWithCombinerHandle(fej9);
             methodHandle = *thunkDetails->getHandleRef();
@@ -9048,11 +9092,9 @@ TR_J9ByteCodeIlGenerator::runFEMacro(TR::SymbolReference *symRef)
          if (comp()->isOutOfProcessCompilation())
             {
             auto stream = TR::CompilationInfo::getStream();
-            stream->write(JITServer::MessageType::runFEMacro_derefUintptrjPtr, thunkDetails->getHandleRef());
-            uintptrj_t receiverHandle = std::get<0>(stream->read<uintptrj_t>());
-            uintptrj_t methodHandle     = walkReferenceChain(pop(), receiverHandle);
-
-            stream->write(JITServer::MessageType::runFEMacro_invokeILGenMacros, methodHandle);
+            std::vector<uintptrj_t> listOfOffsets;
+            packReferenceChainOffsets(pop(), listOfOffsets);
+            stream->write(JITServer::MessageType::runFEMacro_invokeILGenMacrosParameterCount, thunkDetails->getHandleRef(), listOfOffsets);
             parameterCount = std::get<0>(stream->read<int32_t>());
             }
          else
@@ -9083,10 +9125,10 @@ TR_J9ByteCodeIlGenerator::runFEMacro(TR::SymbolReference *symRef)
          if (comp()->isOutOfProcessCompilation())
             {
             auto stream = TR::CompilationInfo::getStream();
-            stream->write(JITServer::MessageType::runFEMacro_derefUintptrjPtr, thunkDetails->getHandleRef());
-            uintptrj_t receiverHandle = std::get<0>(stream->read<uintptrj_t>());
-            uintptrj_t array            = walkReferenceChain(pop(), receiverHandle);
-            arrayLength = (int32_t)fej9->getArrayLengthInElements(array);
+            std::vector<uintptrj_t> listOfOffsets;
+            packReferenceChainOffsets(pop(), listOfOffsets);
+            stream->write(JITServer::MessageType::runFEMacro_invokeILGenMacrosArrayLength, thunkDetails->getHandleRef(), listOfOffsets);
+            arrayLength = std::get<0>(stream->read<int32_t>());
             }
          else
 #endif /* defined(JITSERVER_SUPPORT) */
@@ -9120,11 +9162,11 @@ TR_J9ByteCodeIlGenerator::runFEMacro(TR::SymbolReference *symRef)
          if (comp()->isOutOfProcessCompilation())
             {
             auto stream = TR::CompilationInfo::getStream();
-            stream->write(JITServer::MessageType::runFEMacro_derefUintptrjPtr, thunkDetails->getHandleRef());
-            uintptrj_t receiverHandle = std::get<0>(stream->read<uintptrj_t>());
-            uintptrj_t baseObject       = walkReferenceChain(baseObjectNode, receiverHandle);
+            std::vector<uintptrj_t> listOfOffsets;
+            packReferenceChainOffsets(baseObjectNode, listOfOffsets);
             TR_ASSERT(fieldSym->getDataType() == TR::Int32, "ILGenMacros.getField expecting int field; found load of %s", comp()->getDebug()->getName(symRef));
-            result = fej9->getInt32FieldAt(baseObject, fieldOffset); // TODO: Handle types other than int32
+            stream->write(JITServer::MessageType::runFEMacro_invokeILGenMacrosGetField, thunkDetails->getHandleRef(), fieldOffset, listOfOffsets);
+            result = std::get<0>(stream->read<int32_t>());
             }
          else
 #endif /* defined(JITSERVER_SUPPORT) */
@@ -9178,7 +9220,7 @@ TR_J9ByteCodeIlGenerator::walkReferenceChain(TR::Node *node, uintptrj_t receiver
          }
       TR::Symbol *sym = symRef->getSymbol();
       TR_ASSERT(sym->isShadow() && symRef->getCPIndex() > 0, "walkReferenceChain expecting field load; found load of %s", comp()->getDebug()->getName(symRef));
-      uintptrj_t fieldOffset = symRef->getOffset() - TR::Compiler->om.objectHeaderSizeInBytes(); // blah
+      uintptrj_t fieldOffset = symRef->getOffset() - TR::Compiler->om.objectHeaderSizeInBytes();
       result = fej9->getReferenceFieldAt(walkReferenceChain(node->getFirstChild(), receiver), fieldOffset);
       }
    else
@@ -9198,3 +9240,45 @@ TR_J9ByteCodeIlGenerator::walkReferenceChain(TR::Node *node, uintptrj_t receiver
 
    return result;
    }
+
+
+#if defined(JITSERVER_SUPPORT)
+void
+TR_J9ByteCodeIlGenerator::packReferenceChainOffsets(TR::Node *node, std::vector<uintptrj_t>& listOfOffsets)
+   {
+   if (node->getOpCode().isLoadDirect() && node->getType() == TR::Address)
+      {
+      TR_ASSERT(node->getSymbolReference()->getCPIndex() == 0, "walkReferenceChain expecting aload of 'this'; found aload of %s", comp()->getDebug()->getName(node->getSymbolReference()));
+      return;
+      }
+   else if (node->getOpCode().isLoadIndirect() && node->getType() == TR::Address)
+      {
+      TR::SymbolReference *symRef = node->getSymbolReference();
+      if (symRef->isUnresolved())
+         {
+         if (comp()->getOption(TR_TraceILGen))
+            traceMsg(comp(), "  walkReferenceChain hit unresolved symref %s; aborting\n", symRef->getName(comp()->getDebug()));
+         comp()->failCompilation<TR::ILGenFailure>("Symbol reference is unresolved");
+         }
+      TR::Symbol *sym = symRef->getSymbol();
+      TR_ASSERT(sym->isShadow() && symRef->getCPIndex() > 0, "walkReferenceChain expecting field load; found load of %s", comp()->getDebug()->getName(symRef));
+      uintptrj_t fieldOffset = symRef->getOffset() - TR::Compiler->om.objectHeaderSizeInBytes();
+      packReferenceChainOffsets(node->getFirstChild(), listOfOffsets);
+      listOfOffsets.push_back(fieldOffset);
+      }
+   else
+      {
+      TR_ASSERT(0, "Unexpected opcode in walkReferenceChain: %s", node->getOpCode().getName());
+      comp()->failCompilation<TR::ILGenFailure>("Unexpected opcode in walkReferenceChain");
+      }
+
+   if (comp()->getOption(TR_TraceILGen))
+      {
+      TR_ASSERT(node->getOpCode().hasSymbolReference(), "Can't get here without a symref");
+      traceMsg(comp(), "  walkReferenceChain(%s) // %s\n",
+         comp()->getDebug()->getName(node),
+         comp()->getDebug()->getName(node->getSymbolReference()));
+      }
+   return;
+   }
+#endif

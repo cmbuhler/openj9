@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2000, 2019 IBM Corp. and others
+ * Copyright (c) 2000, 2020 IBM Corp. and others
  *
  * This program and the accompanying materials are made available under
  * the terms of the Eclipse Public License 2.0 which accompanies this
@@ -1049,8 +1049,6 @@ TR::CompilationInfoPerThread::CompilationInfoPerThread(TR::CompilationInfo &comp
       {
       _classesThatShouldNotBeNewlyExtended = NULL;
       }
-
-   _lastLocalGCCounter = 0;
 #endif /* defined(JITSERVER_SUPPORT) */
    }
 
@@ -6896,6 +6894,10 @@ TR::CompilationInfoPerThreadBase::shouldPerformLocalComp(const TR_MethodToBeComp
       (TR::Options::getCmdLineOptions()->getOption(TR_EnableJITServerHeuristics) || localColdCompilations) ||
       !JITServer::ClientStream::isServerCompatible(OMRPORT_FROM_J9PORT(_jitConfig->javaVM->portLibrary)) ||
       (!JITServerHelpers::isServerAvailable() && !JITServerHelpers::shouldRetryConnection(OMRPORT_FROM_J9PORT(_jitConfig->javaVM->portLibrary))))
+      doLocalComp = true;
+
+   // Do a local compile because the Power codegen is missing some FieldWatch relocation support.
+   if (TR::Compiler->target.cpu.isPower() && _jitConfig->inlineFieldWatches)
       doLocalComp = true;
 
    return doLocalComp;
@@ -12854,12 +12856,6 @@ TR::CompilationInfo::canRelocateMethod(TR::Compilation *comp)
    }
 
 #if defined(JITSERVER_SUPPORT)
-void
-TR::CompilationInfoPerThread::updateLastLocalGCCounter()
-   {
-   _lastLocalGCCounter = getCompilationInfo()->getLocalGCCounter();
-   }
-
 // This method is executed by the JITServer to queue a placeholder for
 // a compilation request received from the client. At the time the new
 // entry is queued we do not know any details about the compilation request.

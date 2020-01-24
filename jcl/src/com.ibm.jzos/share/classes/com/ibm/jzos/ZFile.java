@@ -1,5 +1,6 @@
+/*[INCLUDE-IF PLATFORM-mz31|PLATFORM-mz64]*/
 /*******************************************************************************
- * Copyright (c) 2019, 2019 IBM Corp. and others
+ * Copyright (c) 2019, 2020 IBM Corp. and others
  *
  * This program and the accompanying materials are made available under
  * the terms of the Eclipse Public License 2.0 which accompanies this
@@ -50,8 +51,20 @@ public class ZFile {
 		return new byte[] { 0 };
 	}
 
+	public long getRecordCount() throws IOException {
+		return 0;
+	}
+
 	public int read(byte[] buffer) throws IOException {
 		return 0;
+	}
+
+	public int read(byte[] buf, int offset, int len) throws IOException {
+		return 0;
+	}
+
+	public void seek(long offset, int origin) throws IOException {
+		return;
 	}
 
 	public void setPos(byte[] position) throws IOException {
