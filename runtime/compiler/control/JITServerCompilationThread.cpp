@@ -89,7 +89,7 @@ outOfProcessCompilationEnd(
       // need the client id 
       // and the method name 
       std::cout << "Persistent Logging enabled" << std::endl;
-      std::cout << "Found Client id: " << clientUID << endl;
+      std::cout << "Found Client id: " << clientUID << std:: endl;
    }
 
    std::string svmSymbolToIdStr;
