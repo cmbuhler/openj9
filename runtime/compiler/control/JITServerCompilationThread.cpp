@@ -89,26 +89,11 @@ outOfProcessCompilationEnd(
    if (comp-> getOption(TR_PersistLogging)) {
       // insert persistent logging implementation
       uint64_t clientUID = entry->getClientUID();
-      const char* potentialFullMethodName = compInfoPT->getCompilation()->signature();
-      char* methodClassName = compInfoPT->getCompilation()->getMethodBeingCompiled()->classNameChars();
-      char* methodName = compInfoPT->getCompilation()->getMethodBeingCompiled()->nameChars();
-      char* methodSigniture = compInfoPT->getCompilation()->getMethodBeingCompiled()->signatureChars();
-      
+      const char* methodSignature = compInfoPT->getCompilation()->signature();
 
-      uint16_t methodClassNameLength = compInfoPT->getCompilation()->getMethodBeingCompiled()->classNameLength();
-      uint16_t methodNameLength = compInfoPT->getCompilation()->getMethodBeingCompiled()->nameLength();
-      uint16_t methodSignitureLength = compInfoPT->getCompilation()->getMethodBeingCompiled()->signatureLength();
-      // need the client id 
-      // and the method name 
       std::cout << "Persistent Logging enabled" << std::endl;
       std::cout << "Found Client id: " << clientUID << std:: endl;
-      // By default, regular arrays of local scope (for example, those declared within a function) are left uninitialized. 
-      char methodFullName[methodClassNameLength + methodNameLength + methodSignitureLength + 2] = {'\0'};
-      std::strncat(methodFullName, methodClassName, methodClassNameLength);
-      std::strcat(methodFullName, ".");
-      std::strncat(methodFullName, methodName, methodNameLength);
-      std::strncat(methodFullName, methodSigniture, methodSignitureLength);
-      printf("potential method full name: %s\n",potentialFullMethodName);
+      printf("potential method full name: %s\n",methodSignature);
    }
 
    std::string svmSymbolToIdStr;
