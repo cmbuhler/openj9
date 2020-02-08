@@ -89,6 +89,7 @@ outOfProcessCompilationEnd(
    if (comp-> getOption(TR_PersistLogging)) {
       // insert persistent logging implementation
       uint64_t clientUID = entry->getClientUID();
+      const char* potentialFullMethodName = compInfoPT->getCompilation()->signature();
       char* methodClassName = compInfoPT->getCompilation()->getMethodBeingCompiled()->classNameChars();
       char* methodName = compInfoPT->getCompilation()->getMethodBeingCompiled()->nameChars();
       char* methodSigniture = compInfoPT->getCompilation()->getMethodBeingCompiled()->signatureChars();
@@ -107,7 +108,7 @@ outOfProcessCompilationEnd(
       std::strcat(methodFullName, ".");
       std::strncat(methodFullName, methodName, methodNameLength);
       std::strncat(methodFullName, methodSigniture, methodSignitureLength);
-      printf("potential method full name: %s\n",methodFullName);
+      printf("potential method full name: %s\n",potentialFullMethodName);
    }
 
    std::string svmSymbolToIdStr;
