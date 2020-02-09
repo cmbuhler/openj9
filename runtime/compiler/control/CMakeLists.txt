@@ -33,6 +33,7 @@ j9jit_files(
 
 if(JITSERVER_SUPPORT)
 	j9jit_files(
+		control/MongoLogger.cpp
 		control/JITClientCompilationThread.cpp
 		control/JITServerCompilationThread.cpp
 		control/JITServerHelpers.cpp

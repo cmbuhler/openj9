@@ -550,4 +550,16 @@ ifneq ($(JITSERVER_SUPPORT),)
         C_INCLUDES+=$(OPENSSL_DIR)
         CXX_INCLUDES+=$(OPENSSL_DIR)
     endif
+
+    ifneq ($(LIBMONGOCXX_DIR),)
+        CXX_INCLUDES+=$(LIBMONGOCXX_DIR)
+        C_INCLUDES+=$(LIBMONGOCXX_DIR)
+    else
+    	$(error CANT FIND LIBMONGOCXX)
+    endif
+
+    ifneq ($(LIBBSONCXX_DIR),)
+        CXX_INLUCDES+=$(LIBBSONCXX_DIR)
+        C_INCLUDES+=$(LIBBSONCXX_DIR)
+    endif
 endif # JITSERVER_SUPPORT

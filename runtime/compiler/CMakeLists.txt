@@ -365,9 +365,17 @@ target_link_libraries(j9jit
 		j9thr
 		${CMAKE_DL_LIBS}
 )
-
+#Mongocxx Library
+#TODO: Test for enabling Mongo vs Cassandra vs None
+find_package(libmongocxx REQUIRED)
+find_package(libbsoncxx REQUIRED)
+#add_definitions(-DMONGO_LOGGER)
+include_directories(${LIBMONGOCXX_INCLUDE_DIRS})
+include_directories(${LIBBSONCXX_INCLUDE_DIRS})
 if(JITSERVER_SUPPORT)
 	target_link_libraries(j9jit PRIVATE ${PROTOBUF_LIBRARY})
+	target_link_libraries(j9jit	PRIVATE ${LIBMONGOCXX_LIBRARIES})
+	target_link_libraries(j9jit PRIVATE ${LIBBSONCXX_LIBRARIES})
 endif()
 
 # This is a bit hokey, but cmake can't track the fact that files are generated across directories.
