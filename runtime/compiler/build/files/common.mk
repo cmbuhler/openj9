@@ -385,6 +385,7 @@ JIT_PRODUCT_SOURCE_FILES+=\
 
 ifneq ($(J9VM_OPT_JITSERVER),)
 JIT_PRODUCT_SOURCE_FILES+=\
+	compiler/control/MongoLogger.cpp\
     compiler/control/JITClientCompilationThread.cpp \
     compiler/control/JITServerCompilationThread.cpp \
     compiler/control/JITServerHelpers.cpp \

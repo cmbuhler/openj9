@@ -26,6 +26,7 @@
 #include "control/CompilationRuntime.hpp"
 #include "control/MethodToBeCompiled.hpp"
 #include "control/JITServerHelpers.hpp"
+#include "control/MongoLogger.hpp"
 #include "env/ClassTableCriticalSection.hpp"
 #include "env/VMAccessCriticalSection.hpp"
 #include "env/JITServerPersistentCHTable.hpp"
@@ -83,7 +84,10 @@ outOfProcessCompilationEnd(
 
    // Pack log file to send to client
    std::string logFileStr = TR::Options::packLogFile(comp->getOutFile());
-
+   MongoLogger* logger = new MongoLogger("127.0.0.1", "27017", "jitserver_logs", "jitserver", "jitserver");
+   logger->connect();
+   logger->logMethod(compInfoPT->getCompilation()->signature(), entry->getClientUID(), logFileStr);
+   logger->disconnect();
    
 
    if (comp-> getOption(TR_PersistLogging)) {
