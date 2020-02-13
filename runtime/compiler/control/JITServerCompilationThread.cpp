@@ -86,7 +86,7 @@ outOfProcessCompilationEnd(
    std::string logFileStr = TR::Options::packLogFile(comp->getOutFile());
    MongoLogger* logger = new MongoLogger("127.0.0.1", "27017", "jitserver_logs", "jitserver", "jitserver");
    logger->connect();
-   logger->logMethod(compInfoPT->getCompilation()->signature(), entry->getClientUID(), logFileStr);
+   logger->logMethod(std::string(compInfoPT->getCompilation()->signature()), std::to_string(entry->getClientUID()), logFileStr);
    logger->disconnect();
    
 
