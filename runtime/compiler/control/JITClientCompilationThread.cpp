@@ -487,6 +487,7 @@ handleServerMessage(JITServer::ClientStream *client, TR_J9VM *fe, JITServer::Mes
             {
             vmInfo._arrayTypeClasses[i] = fe->getClassFromNewArrayTypeNonNull(i + 4);
             }
+         vmInfo._byteArrayClass = fe->getByteArrayClass();
          vmInfo._readBarrierType = TR::Compiler->om.readBarrierType();
          vmInfo._writeBarrierType = TR::Compiler->om.writeBarrierType();
          vmInfo._compressObjectReferences = TR::Compiler->om.compressObjectReferences();
@@ -593,12 +594,6 @@ handleServerMessage(JITServer::ClientStream *client, TR_J9VM *fe, JITServer::Mes
          {
          TR_OpaqueClassBlock *clazz = std::get<0>(client->getRecvData<TR_OpaqueClassBlock *>());
          client->write(response, fe->classInitIsFinished(clazz));
-         }
-         break;
-      case MessageType::VM_getNewArrayTypeFromClass:
-         {
-         TR_OpaqueClassBlock *clazz = std::get<0>(client->getRecvData<TR_OpaqueClassBlock *>());
-         client->write(response, fe->getNewArrayTypeFromClass(clazz));
          }
          break;
       case MessageType::VM_getClassFromNewArrayType:
@@ -1764,6 +1759,40 @@ handleServerMessage(JITServer::ClientStream *client, TR_J9VM *fe, JITServer::Mes
          client->write(response, ramMethods, vTableOffsets, methodInfos);
          }
          break;
+      case MessageType::ResolvedMethod_getConstantDynamicTypeFromCP:
+         {
+         auto recv = client->getRecvData<TR_ResolvedJ9Method *, int32_t>();
+         auto mirror = std::get<0>(recv);
+         auto cpIndex = std::get<1>(recv);
+
+         J9UTF8 *constantDynamicTypeUtf8 = (J9UTF8 *)mirror->getConstantDynamicTypeFromCP(cpIndex);
+         int constantDynamicTypeUtf8Length = J9UTF8_LENGTH(constantDynamicTypeUtf8);
+         char* constantDynamicTypeUtf8Data = (char *)J9UTF8_DATA(constantDynamicTypeUtf8);
+
+         client->write(response, std::string(constantDynamicTypeUtf8Data, constantDynamicTypeUtf8Length));
+         }
+         break;
+      case MessageType::ResolvedMethod_isUnresolvedConstantDynamic:
+         {
+         auto recv = client->getRecvData<TR_ResolvedJ9Method *, int32_t>();
+         auto mirror = std::get<0>(recv);
+         auto cpIndex = std::get<1>(recv);
+
+         client->write(response, mirror->isUnresolvedConstantDynamic(cpIndex));
+         }
+         break;
+      case MessageType::ResolvedMethod_dynamicConstant:
+         {
+         auto recv = client->getRecvData<TR_ResolvedJ9Method *, int32_t>();
+         auto mirror = std::get<0>(recv);
+         auto cpIndex = std::get<1>(recv);
+
+         TR::VMAccessCriticalSection condyCriticalSection(fe);
+         uintptrj_t obj = 0;
+         uintptrj_t *objLocation = (uintptrj_t*)mirror->dynamicConstant(cpIndex, &obj);
+         client->write(response, objLocation, obj);
+         }
+         break;
       case MessageType::ResolvedRelocatableMethod_createResolvedRelocatableJ9Method:
          {
          auto recv = client->getRecvData<TR_ResolvedJ9Method *, J9Method *, int32_t, uint32_t>();
@@ -1806,7 +1835,7 @@ handleServerMessage(JITServer::ClientStream *client, TR_J9VM *fe, JITServer::Mes
          J9Class *clazz = (J9Class *) J9_CLASS_FROM_METHOD(ramMethod);
          if (!definingClass)
             {
-            definingClass = (J9Class *) compInfoPT->reloRuntime()->getClassFromCP(fe->vmThread(), constantPool, cpIndex, isStatic);
+            definingClass = (J9Class *) TR_ResolvedJ9Method::definingClassFromCPFieldRef(comp, constantPool, cpIndex, isStatic);
             }
          UDATA *classChain = NULL;
          if (definingClass)
@@ -1837,7 +1866,7 @@ handleServerMessage(JITServer::ClientStream *client, TR_J9VM *fe, JITServer::Mes
          bool result = method->fieldAttributes(comp, cpIndex, &fieldOffset, &type, &volatileP, &isFinal, &isPrivate, isStore, &unresolvedInCP, needAOTValidation);
 
          J9ConstantPool *constantPool = (J9ConstantPool *) J9_CP_FROM_METHOD(method->ramMethod());
-         TR_OpaqueClassBlock *definingClass = compInfoPT->reloRuntime()->getClassFromCP(fe->vmThread(), constantPool, cpIndex, false);
+         TR_OpaqueClassBlock *definingClass = TR_ResolvedJ9Method::definingClassFromCPFieldRef(comp, constantPool, cpIndex, false);
 
          TR_J9MethodFieldAttributes attrs(static_cast<uintptr_t>(fieldOffset), type.getDataType(), volatileP, isFinal, isPrivate, unresolvedInCP, result, definingClass);
 
@@ -1857,7 +1886,7 @@ handleServerMessage(JITServer::ClientStream *client, TR_J9VM *fe, JITServer::Mes
          bool result = method->staticAttributes(comp, cpIndex, &address, &type, &volatileP, &isFinal, &isPrivate, isStore, &unresolvedInCP, needAOTValidation);
 
          J9ConstantPool *constantPool = (J9ConstantPool *) J9_CP_FROM_METHOD(method->ramMethod());
-         TR_OpaqueClassBlock *definingClass = compInfoPT->reloRuntime()->getClassFromCP(fe->vmThread(), constantPool, cpIndex, true);
+         TR_OpaqueClassBlock *definingClass = TR_ResolvedJ9Method::definingClassFromCPFieldRef(comp, constantPool, cpIndex, true);
 
          TR_J9MethodFieldAttributes attrs(reinterpret_cast<uintptr_t>(address), type.getDataType(), volatileP, isFinal, isPrivate, unresolvedInCP, result, definingClass);
 

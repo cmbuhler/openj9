@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2000, 2019 IBM Corp. and others
+ * Copyright (c) 2000, 2020 IBM Corp. and others
  *
  * This program and the accompanying materials are made available under
  * the terms of the Eclipse Public License 2.0 which accompanies this
@@ -397,10 +397,15 @@ public:
     *  \param cpIndex
     *     The constant pool index of the constant dynamic.
     *
+    *  \param obj
+    *     Return the resolved constant dynamic value.
+    *
     *  \return
     *     Opaque pointer to the slot containing the resolved constant dynamic value.
+    *     The returned pointer should always be dereferenced by using the passed-in
+    *     parameter "obj".
     */
-   virtual void *                  dynamicConstant(int32_t cpIndex);
+   virtual void *                  dynamicConstant(int32_t cpIndex, uintptrj_t *obj);
    virtual void *                  methodTypeConstant(int32_t cpIndex);
    virtual bool                    isUnresolvedMethodType(int32_t cpIndex);
    virtual void *                  methodHandleConstant(int32_t cpIndex);
@@ -420,6 +425,9 @@ public:
 
 
    virtual bool                    staticAttributes( TR::Compilation *, int32_t cpIndex, void * *, TR::DataType * type, bool * volatileP, bool * isFinal, bool *isPrivate, bool isStore, bool * unresolvedInCP, bool needsAOValidation);
+
+   static TR_OpaqueClassBlock  * definingClassFromCPFieldRef(TR::Compilation *comp, J9ConstantPool *constantPool, int32_t cpIndex, bool isStatic);
+   virtual TR_OpaqueClassBlock * definingClassFromCPFieldRef(TR::Compilation *comp, int32_t cpIndex, bool isStatic);
 
    virtual char *                  fieldNameChars(int32_t cpIndex, int32_t & len);
    virtual char *                  staticNameChars(int32_t cpIndex, int32_t & len);
@@ -566,6 +574,8 @@ public:
    virtual bool                    fieldAttributes ( TR::Compilation *, int32_t cpIndex, uint32_t * fieldOffset, TR::DataType * type, bool * volatileP, bool * isFinal, bool *isPrivate, bool isStore, bool * unresolvedInCP, bool needsAOTValidation);
 
    virtual bool                    staticAttributes( TR::Compilation *, int32_t cpIndex, void * *, TR::DataType * type, bool * volatileP, bool * isFinal, bool *isPrivate, bool isStore, bool * unresolvedInCP, bool needsAOTValidation);
+
+   virtual TR_OpaqueClassBlock * definingClassFromCPFieldRef(TR::Compilation *comp, int32_t cpIndex, bool isStatic);
 
    virtual int32_t                 virtualCallSelector(uint32_t cpIndex);
    virtual char *                  fieldSignatureChars(int32_t cpIndex, int32_t & len);
