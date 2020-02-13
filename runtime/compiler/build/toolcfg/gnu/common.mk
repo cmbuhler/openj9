@@ -551,15 +551,9 @@ ifneq ($(JITSERVER_SUPPORT),)
         CXX_INCLUDES+=$(OPENSSL_DIR)
     endif
 
-    ifneq ($(LIBMONGOCXX_DIR),)
-        CXX_INCLUDES+=$(LIBMONGOCXX_DIR)
-        C_INCLUDES+=$(LIBMONGOCXX_DIR)
-    else
-    	$(error CANT FIND LIBMONGOCXX)
-    endif
-
-    ifneq ($(LIBBSONCXX_DIR),)
-        CXX_INLUCDES+=$(LIBBSONCXX_DIR)
-        C_INCLUDES+=$(LIBBSONCXX_DIR)
-    endif
+    CXX_INCLUDES+=/usr/local/include/mongocxx/v_noabi
+    C_INCLUDES+=/usr/local/include/mongocxx/v_noabi
+    CXX_INCLUDES+=/usr/local/include/bsoncxx/v_noabi
+    C_INCLUDES+=/usr/local/include/bsoncxx/v_noabi
+#    $(error $(CXX_INCLUDES))
 endif # JITSERVER_SUPPORT
