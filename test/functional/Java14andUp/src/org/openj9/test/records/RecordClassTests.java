@@ -1,5 +1,7 @@
+package org.openj9.test.records;
+
 /*******************************************************************************
- * Copyright (c) 2009, 2014 IBM Corp. and others
+ * Copyright (c) 2020, 2020 IBM Corp. and others
  *
  * This program and the accompanying materials are made available under
  * the terms of the Eclipse Public License 2.0 which accompanies this
@@ -19,20 +21,25 @@
  *
  * SPDX-License-Identifier: EPL-2.0 OR Apache-2.0 OR GPL-2.0 WITH Classpath-exception-2.0 OR LicenseRef-GPL-2.0 WITH Assembly-exception
  *******************************************************************************/
-#include "portsock.h"
 
-#if defined(LINUX)
-#include <errno.h>
-#endif
+import org.testng.annotations.Test;
 
-typedef struct j9ipAddress_struct hyipAddress_struct;
-typedef hyipAddress_struct *hyipAddress_t;
+import org.openj9.test.utilities.RecordClassGenerator;
+import org.openj9.test.utilities.CustomClassLoader;
 
-typedef struct j9NetworkInterface_struct hyNetworkInterface_struct;
-typedef hyNetworkInterface_struct *hyNetworkInterface_t;
-typedef struct hyNetworkInterfaceArray_struct j9NetworkInterfaceArray_struct;
+/** 
+ * Test class formatting for records classes introduced in JEP 359
+ * - record class cannot be abstract
+ */
+@Test(groups = { "level.sanity" })
+public class RecordClassTests {
+    String name = "TestBadRecords";
 
-#if defined(LINUX)
-/* Converts (seconds, microseconds) to milliseconds */
-#define TO_MILLIS(sec, microsec) (sec * 1000 + (microsec + 999) / 1000)
-#endif
+    /* record classes cannot be abstract */
+    @Test(expectedExceptions = java.lang.ClassFormatError.class)
+    public void test_recordCannotBeAbstract() {
+        CustomClassLoader classloader = new CustomClassLoader();
+        byte[] bytes = RecordClassGenerator.generateAbstractRecord(name);
+        Class<?> clazz = classloader.getClass(name, bytes);
+    }
+}

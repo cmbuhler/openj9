@@ -1316,7 +1316,8 @@ J9::Options::fePreProcess(void * base)
       if (_aggressivenessLevel == -1) // not yet set
          {
          char *aggressiveOption = "-XaggressivenessLevel";
-         if ((argIndex=FIND_ARG_IN_VMARGS(EXACT_MEMORY_MATCH, aggressiveOption, 0)) >= 0)
+         argIndex = FIND_ARG_IN_VMARGS(EXACT_MEMORY_MATCH, aggressiveOption, 0);
+         if (argIndex >= 0)
             {
             UDATA aggressivenessValue = 0;
             IDATA ret = GET_INTEGER_VALUE(argIndex, aggressiveOption, aggressivenessValue);
@@ -1339,7 +1340,8 @@ J9::Options::fePreProcess(void * base)
       }
 
    char *ccOption = "-Xcodecache";
-   if ((argIndex=FIND_ARG_IN_VMARGS(EXACT_MEMORY_MATCH, ccOption, 0)) >= 0)
+   argIndex = FIND_ARG_IN_VMARGS(EXACT_MEMORY_MATCH, ccOption, 0);
+   if (argIndex >= 0)
       {
       UDATA ccSize;
       GET_MEMORY_VALUE(argIndex, ccOption, ccSize);
@@ -1349,26 +1351,30 @@ J9::Options::fePreProcess(void * base)
 
    static bool doneWithJniAcc = false;
    char *jniAccOption = "-XjniAcc:";
-   if (!doneWithJniAcc && (argIndex=FIND_ARG_IN_VMARGS(STARTSWITH_MATCH, jniAccOption, 0)) >= 0)
+   if (!doneWithJniAcc)
       {
-      char *optValue;
-      doneWithJniAcc = true;
-      GET_OPTION_VALUE(argIndex, ':', &optValue);
-      if (*optValue == '{')
+      argIndex = FIND_ARG_IN_VMARGS(STARTSWITH_MATCH, jniAccOption, 0);
+      if (argIndex >= 0)
          {
-         if (!_debug)
-            TR::Options::createDebug();
-         if (_debug)
+         char *optValue;
+         doneWithJniAcc = true;
+         GET_OPTION_VALUE(argIndex, ':', &optValue);
+         if (*optValue == '{')
             {
-            TR::SimpleRegex *mRegex;
-            mRegex = TR::SimpleRegex::create(optValue);
-            if (!mRegex || *optValue != 0)
+            if (!_debug)
+               TR::Options::createDebug();
+            if (_debug)
                {
-               TR_VerboseLog::write("<JNI: Bad regular expression at --> '%s'>\n", optValue);
-               }
-            else
-               {
-               TR::Options::setJniAccelerator(mRegex);
+               TR::SimpleRegex *mRegex;
+               mRegex = TR::SimpleRegex::create(optValue);
+               if (!mRegex || *optValue != 0)
+                  {
+                  TR_VerboseLog::write("<JNI: Bad regular expression at --> '%s'>\n", optValue);
+                  }
+               else
+                  {
+                  TR::Options::setJniAccelerator(mRegex);
+                  }
                }
             }
          }
@@ -1786,7 +1792,8 @@ J9::Options::fePreProcess(void * base)
       }
 
    char *samplingOption = "-XsamplingExpirationTime";
-   if ((argIndex=FIND_ARG_IN_VMARGS(EXACT_MEMORY_MATCH, samplingOption, 0)) >= 0)
+   argIndex = FIND_ARG_IN_VMARGS(EXACT_MEMORY_MATCH, samplingOption, 0);
+   if (argIndex >= 0)
       {
       UDATA expirationTime;
       IDATA ret = GET_INTEGER_VALUE(argIndex, samplingOption, expirationTime);
@@ -1795,7 +1802,8 @@ J9::Options::fePreProcess(void * base)
       }
 
    char *compThreadsOption = "-XcompilationThreads";
-   if ((argIndex=FIND_ARG_IN_VMARGS(EXACT_MEMORY_MATCH, compThreadsOption, 0)) >= 0)
+   argIndex = FIND_ARG_IN_VMARGS(EXACT_MEMORY_MATCH, compThreadsOption, 0);
+   if (argIndex >= 0)
       {
       UDATA numCompThreads;
       IDATA ret = GET_INTEGER_VALUE(argIndex, compThreadsOption, numCompThreads);
@@ -1949,7 +1957,8 @@ J9::Options::fePreProcess(void * base)
       {
       char *deterministicOption = "-XX:deterministic=";
       const UDATA MAX_DETERMINISTIC_MODE = 9; // only levels 0-9 are allowed
-      if ((argIndex = FIND_ARG_IN_VMARGS(EXACT_MEMORY_MATCH, deterministicOption, 0)) >= 0)
+      argIndex = FIND_ARG_IN_VMARGS(EXACT_MEMORY_MATCH, deterministicOption, 0);
+      if (argIndex >= 0)
          {
          UDATA deterministicMode;
          IDATA ret = GET_INTEGER_VALUE(argIndex, deterministicOption, deterministicMode);

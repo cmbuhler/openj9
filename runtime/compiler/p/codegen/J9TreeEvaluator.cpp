@@ -20,7 +20,6 @@
  * SPDX-License-Identifier: EPL-2.0 OR Apache-2.0 OR GPL-2.0 WITH Classpath-exception-2.0 OR LicenseRef-GPL-2.0 WITH Assembly-exception
  *******************************************************************************/
 
-#ifdef TR_TARGET_POWER
 #include <limits.h>
 #include <math.h>
 #include <stdint.h>
@@ -2164,7 +2163,13 @@ TR::Register *J9::Power::TreeEvaluator::checkcastAndNULLCHKEvaluator(TR::Node *n
 
 TR::Register *J9::Power::TreeEvaluator::newObjectEvaluator(TR::Node *node, TR::CodeGenerator *cg)
    {
-   if (cg->comp()->suppressAllocationInlining())
+   // If the helper symbol set on the node is TR_newValue, we are (expecting to be)
+   // dealing with a value type. Since we do not fully support value types yet, always
+   // call the JIT helper to do the allocation.
+   //
+   TR::Compilation* comp = cg->comp();
+   if (cg->comp()->suppressAllocationInlining() ||
+       (TR::Compiler->om.areValueTypesEnabled() && node->getSymbolReference() == comp->getSymRefTab()->findOrCreateNewValueSymbolRef(comp->getMethodSymbol())))
       {
       TR::ILOpCodes opCode = node->getOpCodeValue();
       TR::Node::recreate(node, TR::acall);
@@ -5817,7 +5822,7 @@ TR::Register *J9::Power::TreeEvaluator::VMmonexitEvaluator(TR::Node *node, TR::C
 
          generateTrg1Src1Instruction(cg, TR::InstOpCode::mr, node, lookupOffsetReg, objReg);
 
-         int32_t t = trailingZeroes(fej9->getObjectAlignmentInBytes());
+         int32_t t = trailingZeroes(TR::Compiler->om.objectAlignmentInBytes());
 
          if (cg->comp()->target().is64Bit())
          generateTrg1Src1ImmInstruction(cg, TR::InstOpCode::sradi, node, lookupOffsetReg, lookupOffsetReg, t);
@@ -6293,7 +6298,7 @@ static void genHeapAlloc(TR::Node *node, TR::Instruction *&iCursor, TR_OpaqueCla
                TR::LabelSymbol *nonZeroLengthLabel = generateLabelSymbol(cg);
                iCursor = generateConditionalBranchInstruction(cg, TR::InstOpCode::bne, node, nonZeroLengthLabel, condReg, iCursor);
 
-               int32_t zeroLenArraySize = (TR::Compiler->om.discontiguousArrayHeaderSizeInBytes() + fej9->getObjectAlignmentInBytes() - 1) & (-fej9->getObjectAlignmentInBytes());
+               int32_t zeroLenArraySize = (TR::Compiler->om.discontiguousArrayHeaderSizeInBytes() + TR::Compiler->om.objectAlignmentInBytes() - 1) & (-TR::Compiler->om.objectAlignmentInBytes());
                TR_ASSERT(zeroLenArraySize >= J9_GC_MINIMUM_OBJECT_SIZE, "Zero-length array size must be bigger than MIN_OBJECT_SIZE");
                TR_ASSERT(zeroLenArraySize <= maxSafeSize, "Zero-length array size must be smaller than maxSafeSize");
                // Load TLH heapAlloc and heapTop values.
@@ -6502,8 +6507,8 @@ static void genHeapAlloc(TR::Node *node, TR::Instruction *&iCursor, TR_OpaqueCla
                   }
 
                int32_t round; // zero indicates no rounding is necessary
-               round = (elementSize >= fej9->getObjectAlignmentInBytes()) ? 0 : fej9->getObjectAlignmentInBytes();
-               bool headerAligned = allocSize % fej9->getObjectAlignmentInBytes() ? 0 : 1;
+               round = (elementSize >= TR::Compiler->om.objectAlignmentInBytes()) ? 0 : TR::Compiler->om.objectAlignmentInBytes();
+               bool headerAligned = allocSize % TR::Compiler->om.objectAlignmentInBytes() ? 0 : 1;
 
                //TODO: The code below pads up the object allocation size so that zero init code later
                //will have multiples of wordsize to work with. For now leaving this code as is, but
@@ -6614,8 +6619,8 @@ static void genHeapAlloc(TR::Node *node, TR::Instruction *&iCursor, TR_OpaqueCla
          //
          if (generateArraylets && (node->getOpCodeValue() == TR::anewarray || node->getOpCodeValue() == TR::newarray))
             {
-            iCursor = generateTrg1Src1ImmInstruction(cg, TR::InstOpCode::addi, node, temp2Reg, temp2Reg, fej9->getObjectAlignmentInBytes() - 1, iCursor);
-            iCursor = generateTrg1Src1Imm2Instruction(cg, cg->comp()->target().is64Bit() ? TR::InstOpCode::rldicr : TR::InstOpCode::rlwinm, node, temp2Reg, temp2Reg, 0, int64_t(-fej9->getObjectAlignmentInBytes()), iCursor);
+            iCursor = generateTrg1Src1ImmInstruction(cg, TR::InstOpCode::addi, node, temp2Reg, temp2Reg, TR::Compiler->om.objectAlignmentInBytes() - 1, iCursor);
+            iCursor = generateTrg1Src1Imm2Instruction(cg, cg->comp()->target().is64Bit() ? TR::InstOpCode::rldicr : TR::InstOpCode::rlwinm, node, temp2Reg, temp2Reg, 0, int64_t(-TR::Compiler->om.objectAlignmentInBytes()), iCursor);
             static const char *p = feGetEnv("TR_TarokAlignHeapTopBreak");
             if (p)
                iCursor = generateInstruction(cg, TR::InstOpCode::bad, node, iCursor);
@@ -7205,7 +7210,7 @@ TR::Register *J9::Power::TreeEvaluator::VMnewEvaluator(TR::Node *node, TR::CodeG
 
    if (!isVariableLen)
       {
-      allocateSize = (allocateSize + fej9->getObjectAlignmentInBytes() - 1) & (-fej9->getObjectAlignmentInBytes());
+      allocateSize = (allocateSize + TR::Compiler->om.objectAlignmentInBytes() - 1) & (-TR::Compiler->om.objectAlignmentInBytes());
       }
 
    if (comp->compileRelocatableCode())
@@ -8228,7 +8233,7 @@ TR::Register *J9::Power::TreeEvaluator::VMmonentEvaluator(TR::Node *node, TR::Co
 
          generateTrg1Src1Instruction(cg, TR::InstOpCode::mr, node, lookupOffsetReg, objReg);
 
-         int32_t t = trailingZeroes(fej9->getObjectAlignmentInBytes());
+         int32_t t = trailingZeroes(TR::Compiler->om.objectAlignmentInBytes());
 
          if (cg->comp()->target().is64Bit())
             generateTrg1Src1ImmInstruction(cg, TR::InstOpCode::sradi, node, lookupOffsetReg, lookupOffsetReg, t);
@@ -14124,11 +14129,6 @@ TR::Register *J9::Power::TreeEvaluator::arraycopyEvaluator(TR::Node *node, TR::C
    return OMR::TreeEvaluatorConnector::arraycopyEvaluator(node, cg);
 #endif /* OMR_GC_CONCURRENT_SCAVENGER */
    }
-
-#else /* TR_TARGET_POWER */
-// the following is to force an export to keep ilib happy
-int J9PPCEvaluator=0;
-#endif /* TR_TARGET_POWER */
 
 TR::Register *
 J9::Power::TreeEvaluator::NULLCHKEvaluator(TR::Node *node, TR::CodeGenerator *cg)

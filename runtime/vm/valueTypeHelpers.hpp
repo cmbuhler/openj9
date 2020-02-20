@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2009, 2014 IBM Corp. and others
+ * Copyright (c) 2020, 2020 IBM Corp. and others
  *
  * This program and the accompanying materials are made available under
  * the terms of the Eclipse Public License 2.0 which accompanies this
@@ -19,20 +19,34 @@
  *
  * SPDX-License-Identifier: EPL-2.0 OR Apache-2.0 OR GPL-2.0 WITH Classpath-exception-2.0 OR LicenseRef-GPL-2.0 WITH Assembly-exception
  *******************************************************************************/
-#include "portsock.h"
 
-#if defined(LINUX)
-#include <errno.h>
-#endif
+#if !defined(VALUETYPEHELPERS_HPP_)
+#define VALUETYPEHELPERS_HPP_
 
-typedef struct j9ipAddress_struct hyipAddress_struct;
-typedef hyipAddress_struct *hyipAddress_t;
+class ValueTypeHelpers {
+	/*
+	 * Data members
+	 */
+private:
 
-typedef struct j9NetworkInterface_struct hyNetworkInterface_struct;
-typedef hyNetworkInterface_struct *hyNetworkInterface_t;
-typedef struct hyNetworkInterfaceArray_struct j9NetworkInterfaceArray_struct;
+protected:
 
-#if defined(LINUX)
-/* Converts (seconds, microseconds) to milliseconds */
-#define TO_MILLIS(sec, microsec) (sec * 1000 + (microsec + 999) / 1000)
-#endif
+public:
+
+	/*
+	 * Function members
+	 */
+private:
+
+protected:
+
+public:
+	static bool
+	isSubstitutable(J9VMThread *currentThread, j9object_t lhs, j9object_t rhs, UDATA startOffset, J9Class *clazz)
+	{
+		return false;
+	}
+
+};
+
+#endif /* VALUETYPEHELPERS_HPP_ */

@@ -261,8 +261,7 @@ inlineVectorizedStringIndexOf(TR::Node* node, TR::CodeGenerator* cg, bool isUTF1
    const uint32_t elementSizeMask = isUTF16 ? 1 : 0;
    const int8_t vectorSize = cg->machine()->getVRFSize();
    const uintptrj_t headerSize = TR::Compiler->om.contiguousArrayHeaderSizeInBytes();
-   // TODO (#8274): Re-enable VSTRS support in inlineVectorizedStringIndexOf
-   const bool supportsVSTRS = cg->comp()->target().cpu.getSupportsVectorFacilityEnhancement2() && feGetEnv("TR_EnableVectorStringSearch") != NULL;
+   const bool supportsVSTRS = cg->comp()->target().cpu.getSupportsVectorFacilityEnhancement2();
    TR::Compilation* comp = cg->comp();
 
    if (comp->getOption(TR_TraceCG))
@@ -450,8 +449,9 @@ inlineVectorizedStringIndexOf(TR::Node* node, TR::CodeGenerator* cg, bool isUTF1
 
       // s2 header not found in s1
       // Load the next 16 bytes of s1 and continue
+      generateRIEInstruction(cg, TR::InstOpCode::getCmpRegAndBranchRelOpCode(), node, s1VecStartIndexReg, maxIndexReg, labelStringNotFound, TR::InstOpCode::COND_BNL);
       generateRRInstruction(cg, TR::InstOpCode::getAddRegOpCode(), node, s1VecStartIndexReg, loadLenReg);
-      generateRIEInstruction(cg, TR::InstOpCode::getCmpRegAndBranchRelOpCode(), node, s1VecStartIndexReg, maxIndexReg, labelStringNotFound, TR::InstOpCode::COND_BHR);
+      generateRIEInstruction(cg, TR::InstOpCode::getCmpRegAndBranchRelOpCode(), node, s1VecStartIndexReg, s1LenReg, labelStringNotFound, TR::InstOpCode::COND_BNL);
       generateS390BranchInstruction(cg, TR::InstOpCode::BRC, TR::InstOpCode::COND_BRC, node, labelFindS2Head);
 
       // s2 header full match
@@ -613,7 +613,6 @@ inlineVectorizedStringIndexOf(TR::Node* node, TR::CodeGenerator* cg, bool isUTF1
       // Byte-index to char-index conversion
       generateRSInstruction(cg, TR::InstOpCode::SRA, node, resultReg, 1);
       }
-
    generateS390BranchInstruction(cg, TR::InstOpCode::BRC, TR::InstOpCode::COND_BRC, node, labelResultDone);
 
    generateS390LabelInstruction(cg, TR::InstOpCode::LABEL, node, labelStringNotFound);
@@ -2896,7 +2895,13 @@ J9::Z::TreeEvaluator::generateHelperCallForVMNewEvaluators(TR::Node *node, TR::C
 TR::Register *
 J9::Z::TreeEvaluator::newObjectEvaluator(TR::Node * node, TR::CodeGenerator * cg)
    {
-   if (cg->comp()->suppressAllocationInlining())
+   // If the helper symbol set on the node is TR_jitNewValue, we are (expecting to be)
+   // dealing with a value type. Since we do not fully support value types yet, always
+   // call the JIT helper to do the allocation.
+   //
+   TR::Compilation* comp = cg->comp();
+   if (cg->comp()->suppressAllocationInlining() ||
+       (TR::Compiler->om.areValueTypesEnabled() && node->getSymbolReference() == comp->getSymRefTab()->findOrCreateNewValueSymbolRef(comp->getMethodSymbol())))
       return generateHelperCallForVMNewEvaluators(node, cg);
    else
       return TR::TreeEvaluator::VMnewEvaluator(node, cg);
@@ -7064,7 +7069,7 @@ J9::Z::TreeEvaluator::VMmonentEvaluator(TR::Node * node, TR::CodeGenerator * cg)
          OOLConditions->addPostCondition(lookupOffsetReg, TR::RealRegister::AssignAny);
 
          int32_t offsetOfMonitorLookupCache = offsetof(J9VMThread, objectMonitorLookupCache);
-         int32_t t = trailingZeroes(fej9->getObjectAlignmentInBytes());
+         int32_t t = trailingZeroes(TR::Compiler->om.objectAlignmentInBytes());
          int32_t shiftAmount = trailingZeroes((int32_t) TR::Compiler->om.sizeofReferenceField()) - t;
          int32_t end = 63 - trailingZeroes((int32_t) TR::Compiler->om.sizeofReferenceField());
          int32_t start = end - trailingZeroes(J9VMTHREAD_OBJECT_MONITOR_CACHE_SIZE) + 1;
@@ -7488,7 +7493,7 @@ J9::Z::TreeEvaluator::VMmonexitEvaluator(TR::Node * node, TR::CodeGenerator * cg
 
 
          int32_t offsetOfMonitorLookupCache = offsetof(J9VMThread, objectMonitorLookupCache);
-         int32_t t = trailingZeroes(fej9->getObjectAlignmentInBytes());
+         int32_t t = trailingZeroes(TR::Compiler->om.objectAlignmentInBytes());
          int32_t shiftAmount = trailingZeroes((int32_t) TR::Compiler->om.sizeofReferenceField()) - t;
          int32_t end = 63 - trailingZeroes((int32_t) TR::Compiler->om.sizeofReferenceField());
          int32_t start = end - trailingZeroes(J9VMTHREAD_OBJECT_MONITOR_CACHE_SIZE) + 1;
@@ -7782,7 +7787,7 @@ roundArrayLengthToObjectAlignment(TR::CodeGenerator* cg, TR::Node* node, TR::Ins
       TR::RegisterDependencyConditions* conditions, TR::Register *litPoolBaseReg, int32_t allocSize, int32_t elementSize, TR::Register* sizeReg, TR::LabelSymbol * exitOOLLabel = NULL)
    {
    TR_J9VMBase *fej9 = (TR_J9VMBase *)(cg->fe());
-   int32_t alignmentConstant = fej9->getObjectAlignmentInBytes();
+   int32_t alignmentConstant = TR::Compiler->om.objectAlignmentInBytes();
    if (exitOOLLabel)
       {
       TR_Debug * debugObj = cg->getDebug();
@@ -7832,7 +7837,7 @@ genHeapAlloc(TR::Node * node, TR::Instruction *& iCursor, bool isVariableLen, TR
 
       // bool sizeInReg = (isVariableLen || (allocSize > MAX_IMMEDIATE_VAL));
 
-      int alignmentConstant = fej9->getObjectAlignmentInBytes();
+      int alignmentConstant = TR::Compiler->om.objectAlignmentInBytes();
 
       if (isVariableLen)
          {
@@ -8534,7 +8539,7 @@ J9::Z::TreeEvaluator::VMnewEvaluator(TR::Node * node, TR::CodeGenerator * cg)
       // if variable-length array   - dataSizeReg will contain the (calculated) size
       // if outlined                - tmpReg will contain the value of
       // otherwise                  - size is in (int) allocateSize
-      int alignmentConstant = fej9->getObjectAlignmentInBytes();
+      int alignmentConstant = TR::Compiler->om.objectAlignmentInBytes();
 
       if (isVariableLen)
          allocateSize += dataBegin;
