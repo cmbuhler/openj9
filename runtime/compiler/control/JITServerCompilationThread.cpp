@@ -94,7 +94,10 @@ outOfProcessCompilationEnd(
       std::cout << "Persistent Logging enabled" << std::endl;
       std::cout << "Found Client id: " << clientUID << std:: endl;
       printf("potential method full name: %s\n",methodSignature);
+      uint32_t persistentLoggingDatabasePort = compInfoPT->getCompilationInfo()->getPersistentInfo()->getJITServerPersistentLoggingDatabasePort();
+      std::cout << "what is the persistent logging database port ? " << persistentLoggingDatabasePort << std::endl;
    }
+
 
    std::string svmSymbolToIdStr;
    if (comp->getOption(TR_UseSymbolValidationManager))

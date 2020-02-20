@@ -1074,19 +1074,28 @@ static void JITServerParseCommonOptions(J9JavaVM *vm, TR::CompilationInfo *compI
    const char *xxJITServerSSLKeyOption = "-XX:JITServerSSLKey=";
    const char *xxJITServerSSLCertOption = "-XX:JITServerSSLCert=";
    const char *xxJITServerSSLRootCertsOption = "-XX:JITServerSSLRootCerts=";
+   const char *xxJITServerPersistentLoggingDatabasePortOption = "-XX:JITServerPersistentLoggingDatabasePort=";
 
    int32_t xxJITServerPortArgIndex = FIND_ARG_IN_VMARGS(STARTSWITH_MATCH, xxJITServerPortOption, 0);
    int32_t xxJITServerTimeoutArgIndex = FIND_ARG_IN_VMARGS(STARTSWITH_MATCH, xxJITServerTimeoutOption, 0);
    int32_t xxJITServerSSLKeyArgIndex = FIND_ARG_IN_VMARGS(STARTSWITH_MATCH, xxJITServerSSLKeyOption, 0);
    int32_t xxJITServerSSLCertArgIndex = FIND_ARG_IN_VMARGS(STARTSWITH_MATCH, xxJITServerSSLCertOption, 0);
    int32_t xxJITServerSSLRootCertsArgIndex = FIND_ARG_IN_VMARGS(STARTSWITH_MATCH, xxJITServerSSLRootCertsOption, 0);
-
+   int32_t xxJITServerPersistentLoggingDatabasePortArgIndex = FIND_ARG_IN_VMARGS(STARTSWITH_MATCH, xxJITServerPersistentLoggingDatabasePortOption, 0);
    if (xxJITServerPortArgIndex >= 0)
       {
       uint32_t port=0;
       IDATA ret = GET_INTEGER_VALUE(xxJITServerPortArgIndex, xxJITServerPortOption, port);
       if (ret == OPTION_OK)
          compInfo->getPersistentInfo()->setJITServerPort(port);
+      }
+
+   if (xxJITServerPersistentLoggingDatabasePortArgIndex >= 0)
+      {
+      uint32_t port=0;
+      IDATA ret = GET_INTEGER_VALUE(xxJITServerPersistentLoggingDatabasePortArgIndex, xxJITServerPersistentLoggingDatabasePortOption, port);
+      if (ret == OPTION_OK)
+         compInfo->getPersistentInfo()->setJITServerPersistentLoggingDatabasePort(port);
       }
 
    if (xxJITServerTimeoutArgIndex >= 0)
