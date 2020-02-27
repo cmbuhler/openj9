@@ -1149,6 +1149,10 @@ handleServerMessage(JITServer::ClientStream *client, TR_J9VM *fe, JITServer::Mes
          client->write(response, attrs);
          }
          break;
+<<<<<<< HEAD
+=======
+
+>>>>>>> -XX flags needed for persistent logging completed
       case MessageType::ResolvedMethod_definingClassFromCPFieldRef:
          {
          auto recv = client->getRecvData<TR_ResolvedJ9Method *, int32_t, bool>();

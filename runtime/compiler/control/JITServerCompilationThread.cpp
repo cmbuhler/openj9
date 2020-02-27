@@ -114,6 +114,17 @@ outOfProcessCompilationEnd(
       printf("potential method full name: %s\n",methodFullName);
       uint32_t persistentLoggingDatabasePort = compInfoPT->getCompilationInfo()->getPersistentInfo()->getJITServerPersistentLoggingDatabasePort();
       std::cout << "what is the persistent logging database port ? " << persistentLoggingDatabasePort << std::endl;
+      std::string persistentLoggingDatabaseAddress = compInfoPT->getCompilationInfo()->getPersistentInfo()->getJITServerPersistentLoggingDatabaseAddress();
+      std::cout << "what is the persistent logging database Address ? " << persistentLoggingDatabaseAddress << std::endl;
+
+      std::string persistentLoggingDatabaseUsername = compInfoPT->getCompilationInfo()->getPersistentInfo()->getJITServerPersistentLoggingDatabaseUsername();
+      std::cout << "what is the persistent logging database Username ? " << persistentLoggingDatabaseUsername << std::endl;
+
+      std::string persistentLoggingDatabasePassword = compInfoPT->getCompilationInfo()->getPersistentInfo()->getJITServerPersistentLoggingDatabasePassword();
+      std::cout << "what is the persistent logging database Password ? " << persistentLoggingDatabasePassword << std::endl;
+
+      std::string persistentLoggingDatabaseName = compInfoPT->getCompilationInfo()->getPersistentInfo()->getJITServerPersistentLoggingDatabaseName();
+      std::cout << "what is the persistent logging database Name ? " << persistentLoggingDatabaseName << std::endl;
 
 #ifdef CASSANDRA_LOGGER
       auto* logger = new CassandraLogger("127.0.0.1", "27017", "jitserver_logs", "jitserver", "jitserver");
