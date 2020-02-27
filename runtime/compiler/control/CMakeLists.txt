@@ -33,9 +33,18 @@ j9jit_files(
 
 if(JITSERVER_SUPPORT)
 	j9jit_files(
-		control/MongoLogger.cpp
 		control/JITClientCompilationThread.cpp
 		control/JITServerCompilationThread.cpp
 		control/JITServerHelpers.cpp
 	)
+	if(TRUE) #TODO: Add and check Mongo_logger_Support flag
+		j9jit_files(
+				control/MongoLogger.cpp
+		)
+	endif()
+	if(FALSE) #TODO: Add and check Cassandra_logger_Support flag
+		#j9jit_files(
+		#		control/CassandraLogger.cpp
+		#)
+	endif()
 endif()

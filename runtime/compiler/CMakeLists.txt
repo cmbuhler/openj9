@@ -133,6 +133,13 @@ if(JITSERVER_SUPPORT)
 	include(FindOpenSSL)
 	find_package(OpenSSL REQUIRED)
 	include_directories(${OPENSSL_INCLUDE_DIR})
+
+	if(TRUE) #TODO: Add MONGO_LOGGER_SUPPORT flag check
+		add_definitions(-DMONGO_LOGGER)
+	endif()
+	if(FALSE) #TODO: Add CASSANDRA_LOGGER_SUPPORT flag check
+		add_definitions(-DCASSANDRA_LOGGER)
+	endif()
 endif()
 
 #TODO We should get rid of this, but its still required by the compiler_support module in omr
@@ -365,17 +372,9 @@ target_link_libraries(j9jit
 		j9thr
 		${CMAKE_DL_LIBS}
 )
-#Mongocxx Library
-#TODO: Test for enabling Mongo vs Cassandra vs None
-find_package(libmongocxx REQUIRED)
-find_package(libbsoncxx REQUIRED)
-#add_definitions(-DMONGO_LOGGER)
-include_directories(${LIBMONGOCXX_INCLUDE_DIRS})
-include_directories(${LIBBSONCXX_INCLUDE_DIRS})
+
 if(JITSERVER_SUPPORT)
 	target_link_libraries(j9jit PRIVATE ${PROTOBUF_LIBRARY})
-	target_link_libraries(j9jit	PRIVATE ${LIBMONGOCXX_LIBRARIES})
-	target_link_libraries(j9jit PRIVATE ${LIBBSONCXX_LIBRARIES})
 endif()
 
 # This is a bit hokey, but cmake can't track the fact that files are generated across directories.
