@@ -132,6 +132,13 @@ if(J9VM_OPT_JITSERVER)
 	include(FindOpenSSL)
 	find_package(OpenSSL REQUIRED)
 	include_directories(${OPENSSL_INCLUDE_DIR})
+
+	if(TRUE) #TODO: Add MONGO_LOGGER_SUPPORT flag check
+		add_definitions(-DMONGO_LOGGER)
+	endif()
+	if(FALSE) #TODO: Add CASSANDRA_LOGGER_SUPPORT flag check
+		add_definitions(-DCASSANDRA_LOGGER)
+	endif()
 endif()
 
 #TODO We should get rid of this, but its still required by the compiler_support module in omr

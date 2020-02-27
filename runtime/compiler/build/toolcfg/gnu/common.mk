@@ -525,6 +525,13 @@ ifneq ($(J9VM_OPT_JITSERVER),)
     PROTO_CMD?=protoc
 
     SOLINK_SLINK_STATIC=-l:libprotobuf.a
+    ifneq (1,1) #TODO: Add CASSANDRA_LOGGER_SUPPORT flag check
+    	SOLINK_SLINK+=cassandra
+    endif
+    ifneq (1,0) #TODO: Add MONGO_LOGGER_SUPPORT flag check
+    	SOLINK_SLINK+=bsoncxx
+    	SOLINK_SLINK+=mongocxx
+    endif
     CXX_DEFINES+=GOOGLE_PROTOBUF_NO_RTTI
 
     ifneq ($(OPENSSL_CFLAGS),)
@@ -542,16 +549,9 @@ ifneq ($(J9VM_OPT_JITSERVER),)
         C_INCLUDES+=$(OPENSSL_DIR)
         CXX_INCLUDES+=$(OPENSSL_DIR)
     endif
-
-    ifneq ($(LIBMONGOCXX_DIR),)
-        CXX_INCLUDES+=$(LIBMONGOCXX_DIR)
-        C_INCLUDES+=$(LIBMONGOCXX_DIR)
-    else
-    	$(error CANT FIND LIBMONGOCXX)
-    endif
-
-    ifneq ($(LIBBSONCXX_DIR),)
-        CXX_INLUCDES+=$(LIBBSONCXX_DIR)
-        C_INCLUDES+=$(LIBBSONCXX_DIR)
+	#TODO: Add MONGO_LOGGER_SUPPORT flag check
+    ifneq (1,0)
+    	CXX_INCLUDES+=/usr/include/mongocxx/v_noabi
+    	CXX_INCLUDES+=/usr/include/bsoncxx/v_noabi
     endif
 endif # J9VM_OPT_JITSERVER

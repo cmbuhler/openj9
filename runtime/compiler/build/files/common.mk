@@ -385,7 +385,6 @@ JIT_PRODUCT_SOURCE_FILES+=\
 
 ifneq ($(J9VM_OPT_JITSERVER),)
 JIT_PRODUCT_SOURCE_FILES+=\
-	compiler/control/MongoLogger.cpp\
     compiler/control/JITClientCompilationThread.cpp \
     compiler/control/JITServerCompilationThread.cpp \
     compiler/control/JITServerHelpers.cpp \
@@ -403,6 +402,14 @@ JIT_PRODUCT_SOURCE_FILES+=\
     compiler/runtime/JITServerIProfiler.cpp \
     compiler/runtime/JITServerStatisticsThread.cpp \
     compiler/runtime/Listener.cpp
+
+    #TODO: Add MONGO_LOGGER_SUPPORT flag check
+    ifneq (1,0)
+    JIT_PRODUCT_SOURCE_FILES+=compiler/control/MongoLogger.cpp
+    endif
+    ifneq (1,1) #TODO: Add CASSANDA_LOGGER_SUPPORT flag check
+    JIT_PRODUCT_SOURCE_FILES+=compiler/control/CassandraLogger.cpp
+    endif
 endif
 
 -include $(JIT_MAKE_DIR)/files/extra.mk

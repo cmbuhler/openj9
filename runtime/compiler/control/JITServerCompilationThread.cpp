@@ -26,7 +26,12 @@
 #include "control/CompilationRuntime.hpp"
 #include "control/MethodToBeCompiled.hpp"
 #include "control/JITServerHelpers.hpp"
+#ifdef CASSANDRA_LOGGER
+#include "control/CassandraLogger.hpp"
+#endif // CASSANDRA_LOGGER
+#ifdef MONGO_LOOGGER
 #include "control/MongoLogger.hpp"
+#endif // MONGO_LOGGER
 #include "env/ClassTableCriticalSection.hpp"
 #include "env/VMAccessCriticalSection.hpp"
 #include "env/JITServerPersistentCHTable.hpp"
@@ -84,11 +89,6 @@ outOfProcessCompilationEnd(
 
    // Pack log file to send to client
    std::string logFileStr = TR::Options::packLogFile(comp->getOutFile());
-   MongoLogger* logger = new MongoLogger("127.0.0.1", "27017", "jitserver_logs", "jitserver", "jitserver");
-   logger->connect();
-   logger->logMethod(std::string(compInfoPT->getCompilation()->signature()), std::to_string(entry->getClientUID()), logFileStr);
-   logger->disconnect();
-   
 
    if (comp-> getOption(TR_PersistLogging)) {
       // insert persistent logging implementation
@@ -114,6 +114,20 @@ outOfProcessCompilationEnd(
       printf("potential method full name: %s\n",methodFullName);
       uint32_t persistentLoggingDatabasePort = compInfoPT->getCompilationInfo()->getPersistentInfo()->getJITServerPersistentLoggingDatabasePort();
       std::cout << "what is the persistent logging database port ? " << persistentLoggingDatabasePort << std::endl;
+
+#ifdef CASSANDRA_LOGGER
+      auto* logger = new CassandraLogger("127.0.0.1", "27017", "jitserver_logs", "jitserver", "jitserver");
+      logger->connect();
+      logger->logMethod(std::string(compInfoPT->getCompilation()->signature()), std::to_string(entry->getClientUID()), logFileStr);
+      logger->disconnect();
+#endif // CASSANDRA_LOGGER
+
+#ifdef MONGO_LOGGER
+      auto* logger = new MongoLogger("127.0.0.1", "27017", "jitserver_logs", "jitserver", "jitserver");
+      logger->connect();
+      logger->logMethod(std::string(compInfoPT->getCompilation()->signature()), std::to_string(entry->getClientUID()), logFileStr);
+      logger->disconnect();
+#endif // MONGO_LOGGER
    }
 
 
