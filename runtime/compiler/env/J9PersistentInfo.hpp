@@ -133,6 +133,12 @@ class PersistentInfo : public OMR::PersistentInfoConnector
          _remoteCompilationMode(JITServer::NONE),
          _JITServerAddress("localhost"),
          _JITServerPort(38400),
+         _JITServerPersistentLoggingDatabasePort(0),
+         _JITServerPersistentLoggingDatabaseAddress("127.0.0.1"),
+         _JITServerPersistentLoggingDatabaseUsername("admin"),
+         _JITServerPersistentLoggingDatabaseName("jitserver_logs"),
+         _JITServerPersistentLoggingDatabasePassword("password"),
+
          _socketTimeoutMs(2000),
          _clientUID(0),
 #endif /* defined(JITSERVER_SUPPORT) */
@@ -305,6 +311,19 @@ class PersistentInfo : public OMR::PersistentInfoConnector
    void setSocketTimeout(uint32_t t) { _socketTimeoutMs = t; }
    uint32_t getJITServerPort() const { return _JITServerPort; }
    void setJITServerPort(uint32_t port) { _JITServerPort = port; }
+   void setJITServerPersistentLoggingDatabasePort(uint32_t port) {_JITServerPersistentLoggingDatabasePort = port;}
+   uint32_t getJITServerPersistentLoggingDatabasePort() const { return _JITServerPersistentLoggingDatabasePort; }
+   void setJITServerPersistentLoggingDatabaseAddress(char *addr) {_JITServerPersistentLoggingDatabaseAddress = addr;}
+   const std::string &getJITServerPersistentLoggingDatabaseAddress() const { return _JITServerPersistentLoggingDatabaseAddress; }
+
+   void setJITServerPersistentLoggingDatabaseUsername(char *username) {_JITServerPersistentLoggingDatabaseUsername = username;}
+   const std::string &getJITServerPersistentLoggingDatabaseUsername() const { return _JITServerPersistentLoggingDatabaseUsername; }
+   
+   void setJITServerPersistentLoggingDatabasePassword(char *password) {_JITServerPersistentLoggingDatabasePassword = password;}
+   const std::string &getJITServerPersistentLoggingDatabasePassword() const { return _JITServerPersistentLoggingDatabasePassword; }
+   
+   void setJITServerPersistentLoggingDatabaseName(char *name) {_JITServerPersistentLoggingDatabaseName = name;}
+   const std::string &getJITServerPersistentLoggingDatabaseName() const { return _JITServerPersistentLoggingDatabaseName; }
    uint64_t getClientUID() const { return _clientUID; }
    void setClientUID(uint64_t val) { _clientUID = val; }
 #endif /* defined(JITSERVER_SUPPORT) */
@@ -394,7 +413,12 @@ class PersistentInfo : public OMR::PersistentInfoConnector
 #if defined(JITSERVER_SUPPORT)
    JITServer::RemoteCompilationModes _remoteCompilationMode; // JITServer::NONE, JITServer::CLIENT, JITServer::SERVER
    std::string _JITServerAddress;
+   std::string _JITServerPersistentLoggingDatabaseAddress;
+   std::string _JITServerPersistentLoggingDatabaseUsername;
+   std::string _JITServerPersistentLoggingDatabasePassword;
+   std::string _JITServerPersistentLoggingDatabaseName;
    uint32_t    _JITServerPort;
+   uint32_t _JITServerPersistentLoggingDatabasePort;
    uint32_t    _socketTimeoutMs; // timeout for communication sockets used in out-of-process JIT compilation
    uint64_t    _clientUID;
 #endif /* defined(JITSERVER_SUPPORT) */

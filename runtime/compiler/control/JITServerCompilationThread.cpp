@@ -93,25 +93,24 @@ outOfProcessCompilationEnd(
    if (comp-> getOption(TR_PersistLogging)) {
       // insert persistent logging implementation
       uint64_t clientUID = entry->getClientUID();
-      char* methodClassName = compInfoPT->getCompilation()->getMethodBeingCompiled()->classNameChars();
-      char* methodName = compInfoPT->getCompilation()->getMethodBeingCompiled()->nameChars();
-      char* methodSigniture = compInfoPT->getCompilation()->getMethodBeingCompiled()->signatureChars();
-      
+      const char* methodSignature = compInfoPT->getCompilation()->signature();
 
-      uint16_t methodClassNameLength = compInfoPT->getCompilation()->getMethodBeingCompiled()->classNameLength();
-      uint16_t methodNameLength = compInfoPT->getCompilation()->getMethodBeingCompiled()->nameLength();
-      uint16_t methodSignitureLength = compInfoPT->getCompilation()->getMethodBeingCompiled()->signatureLength();
-      // need the client id 
-      // and the method name 
       std::cout << "Persistent Logging enabled" << std::endl;
       std::cout << "Found Client id: " << clientUID << std:: endl;
-      // By default, regular arrays of local scope (for example, those declared within a function) are left uninitialized. 
-      char methodFullName[methodClassNameLength + methodNameLength + methodSignitureLength + 2] = {'\0'};
-      std::strncat(methodFullName, methodClassName, methodClassNameLength);
-      std::strcat(methodFullName, ".");
-      std::strncat(methodFullName, methodName, methodNameLength);
-      std::strncat(methodFullName, methodSigniture, methodSignitureLength);
-      printf("potential method full name: %s\n",methodFullName);
+      printf("potential method full name: %s\n",methodSignature);
+      uint32_t persistentLoggingDatabasePort = compInfoPT->getCompilationInfo()->getPersistentInfo()->getJITServerPersistentLoggingDatabasePort();
+      std::cout << "what is the persistent logging database port ? " << persistentLoggingDatabasePort << std::endl;
+      std::string persistentLoggingDatabaseAddress = compInfoPT->getCompilationInfo()->getPersistentInfo()->getJITServerPersistentLoggingDatabaseAddress();
+      std::cout << "what is the persistent logging database Address ? " << persistentLoggingDatabaseAddress << std::endl;
+
+      std::string persistentLoggingDatabaseUsername = compInfoPT->getCompilationInfo()->getPersistentInfo()->getJITServerPersistentLoggingDatabaseUsername();
+      std::cout << "what is the persistent logging database Username ? " << persistentLoggingDatabaseUsername << std::endl;
+
+      std::string persistentLoggingDatabasePassword = compInfoPT->getCompilationInfo()->getPersistentInfo()->getJITServerPersistentLoggingDatabasePassword();
+      std::cout << "what is the persistent logging database Password ? " << persistentLoggingDatabasePassword << std::endl;
+
+      std::string persistentLoggingDatabaseName = compInfoPT->getCompilationInfo()->getPersistentInfo()->getJITServerPersistentLoggingDatabaseName();
+      std::cout << "what is the persistent logging database Name ? " << persistentLoggingDatabaseName << std::endl;
 
 #ifdef CASSANDRA_LOGGER
       auto* logger = new CassandraLogger("127.0.0.1", "27017", "jitserver_logs", "jitserver", "jitserver");
