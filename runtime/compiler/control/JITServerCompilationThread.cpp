@@ -112,15 +112,42 @@ outOfProcessCompilationEnd(
       std::string persistentLoggingDatabaseName = compInfoPT->getCompilationInfo()->getPersistentInfo()->getJITServerPersistentLoggingDatabaseName();
       std::cout << "what is the persistent logging database Name ? " << persistentLoggingDatabaseName << std::endl;
 
+#if defined CASSANDRA_LOGGER || defined MONGO_LOGGER
+      auto* pInfo - compInfoPT->getCompilationInfo()->getPersistentInfo();
+      std::string dbip = pInfo->getJITServerPersistentLoggingDatabaseAddress();
+      if (dbip == ""){
+          dbip = "127.0.0.1"
+      }
+
+      std::string dbport = pInfo->getJITServerPersistentLoggingPort();
+      if (dbport == ""){
+#ifdef MONGO_LOGGER
+          dbport = "27017";
+#endif //MONGO_LOGGER
 #ifdef CASSANDRA_LOGGER
+          dbport = "9042";
+#endif // CASSANDRA_LOGGER
+      }
+#endif //CASSANDRA_LOGGER || MONGO_LOGGER
+
+
+#ifdef CASSANDRA_LOGGER
+<<<<<<< HEAD
       auto* logger = new CassandraLogger(persistentLoggingDatabaseAddress, std::to_string(persistentLoggingDatabasePort), persistentLoggingDatabaseName,persistentLoggingDatabaseUsername, persistentLoggingDatabasePassword);
+=======
+      auto* logger = new CassandraLogger(dbip, dbport, "jitserver_logs", "jitserver", "jitserver");
+>>>>>>> 9f3d82f9c7155bafa7bdd474395bd9b7084d0ab1
       logger->connect();
       logger->logMethod(std::string(methodSignature), std::to_string(clientUID), logFileStr);
       logger->disconnect();
 #endif // CASSANDRA_LOGGER
 
 #ifdef MONGO_LOGGER
+<<<<<<< HEAD
       auto* logger = new MongoLogger(persistentLoggingDatabaseAddress, std::to_string(persistentLoggingDatabasePort), persistentLoggingDatabaseName,persistentLoggingDatabaseUsername, persistentLoggingDatabasePassword);
+=======
+      auto* logger = new MongoLogger(dbip, "27017", "jitserver_logs", "jitserver", "jitserver");
+>>>>>>> 9f3d82f9c7155bafa7bdd474395bd9b7084d0ab1
       logger->connect();
       logger->logMethod(std::string(methodSignature), std::to_string(clientUID), logFileStr);
       logger->disconnect();

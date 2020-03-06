@@ -403,11 +403,10 @@ JIT_PRODUCT_SOURCE_FILES+=\
     compiler/runtime/JITServerStatisticsThread.cpp \
     compiler/runtime/Listener.cpp
 
-    #TODO: Add MONGO_LOGGER_SUPPORT flag check
-    ifneq (1,0)
+    ifeq ($(PERSISTENT_LOGGER),MONGODB)
     JIT_PRODUCT_SOURCE_FILES+=compiler/control/MongoLogger.cpp
     endif
-    ifneq (1,1) #TODO: Add CASSANDA_LOGGER_SUPPORT flag check
+    ifeq ($(PERSISTENT_LOGGER),CASSANDRA)
     JIT_PRODUCT_SOURCE_FILES+=compiler/control/CassandraLogger.cpp
     endif
 endif

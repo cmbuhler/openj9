@@ -533,10 +533,10 @@ ifneq ($(JITSERVER_SUPPORT),)
     PROTO_CMD?=protoc
 
     SOLINK_SLINK_STATIC=-l:libprotobuf.a
-    ifneq (1,1) #TODO: Add CASSANDRA_LOGGER_SUPPORT flag check
+    ifeq ($(PERSISTENT_LOGGER),CASSANDRA)
     	SOLINK_SLINK+=cassandra
     endif
-    ifneq (1,0) #TODO: Add MONGO_LOGGER_SUPPORT flag check
+    ifeq ($(PERSISTENT_LOGGER),MONGODB)
     	SOLINK_SLINK+=bsoncxx
     	SOLINK_SLINK+=mongocxx
     endif
@@ -557,8 +557,8 @@ ifneq ($(JITSERVER_SUPPORT),)
         C_INCLUDES+=$(OPENSSL_DIR)
         CXX_INCLUDES+=$(OPENSSL_DIR)
     endif
-    #TODO: Add MONGO_LOGGER_SUPPORT flag check
-    ifneq (1,0)
+
+    ifeq ($(PERSISTENT_LOGGER),MONGODB)
     	CXX_INCLUDES+=/usr/include/mongocxx/v_noabi
     	CXX_INCLUDES+=/usr/include/bsoncxx/v_noabi
     endif
