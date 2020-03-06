@@ -525,10 +525,10 @@ ifneq ($(J9VM_OPT_JITSERVER),)
     PROTO_CMD?=protoc
 
     SOLINK_SLINK_STATIC=-l:libprotobuf.a
-    ifneq (1,1) #TODO: Add CASSANDRA_LOGGER_SUPPORT flag check
+    ifeq ($(PERSISTENT_LOGGER),CASSANDRA)
     	SOLINK_SLINK+=cassandra
     endif
-    ifneq (1,0) #TODO: Add MONGO_LOGGER_SUPPORT flag check
+    ifeq ($(PERSISTENT_LOGGER),MONGODB)
     	SOLINK_SLINK+=bsoncxx
     	SOLINK_SLINK+=mongocxx
     endif
@@ -549,8 +549,13 @@ ifneq ($(J9VM_OPT_JITSERVER),)
         C_INCLUDES+=$(OPENSSL_DIR)
         CXX_INCLUDES+=$(OPENSSL_DIR)
     endif
+<<<<<<< HEAD
 	#TODO: Add MONGO_LOGGER_SUPPORT flag check
     ifneq (1,0)
+=======
+
+    ifeq ($(PERSISTENT_LOGGER),MONGODB)
+>>>>>>> IMplement environment variable ifdef wrapper thing
     	CXX_INCLUDES+=/usr/include/mongocxx/v_noabi
     	CXX_INCLUDES+=/usr/include/bsoncxx/v_noabi
     endif

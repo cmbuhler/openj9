@@ -80,7 +80,7 @@ add_custom_command(
 )
 add_custom_target(j9jit_tracegen DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/env/ut_j9jit.h)
 
-# J9VM_OPT_JITSERVER and protobuf
+# J9VM_OPT_JITSERVER and protobuf and Persistent Loggers
 if(J9VM_OPT_JITSERVER)
 	message(STATUS "JITServer is supported")
 
@@ -133,10 +133,11 @@ if(J9VM_OPT_JITSERVER)
 	find_package(OpenSSL REQUIRED)
 	include_directories(${OPENSSL_INCLUDE_DIR})
 
-	if(TRUE) #TODO: Add MONGO_LOGGER_SUPPORT flag check
+	#Check for environment variable enabling the persistent logger
+	if(PERSISTENT_LOGGER EQUAL MONGODB)
 		add_definitions(-DMONGO_LOGGER)
 	endif()
-	if(FALSE) #TODO: Add CASSANDRA_LOGGER_SUPPORT flag check
+	if(PERSISTENT_LOGGER EQUAL CASSANDRA)
 		add_definitions(-DCASSANDRA_LOGGER)
 	endif()
 endif()
