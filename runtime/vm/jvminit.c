@@ -596,13 +596,13 @@ areValueTypesEnabled(J9JavaVM *vm)
 	return J9_ARE_ALL_BITS_SET(vm->extendedRuntimeFlags2, J9_EXTENDED_RUNTIME2_ENABLE_VALHALLA);
 }
 
-#if defined(JITSERVER_SUPPORT)
+#if defined(J9VM_OPT_JITSERVER)
 BOOLEAN
 isJITServerEnabled(J9JavaVM *vm)
 {
 	return J9_ARE_ALL_BITS_SET(vm->extendedRuntimeFlags2, J9_EXTENDED_RUNTIME2_ENABLE_START_JITSERVER);
 }
-#endif /* JITSERVER_SUPPORT */
+#endif /* J9VM_OPT_JITSERVER */
 
 void
 freeJavaVM(J9JavaVM * vm)
@@ -1000,11 +1000,11 @@ initializeJavaVM(void * osMainThread, J9JavaVM ** vmPtr, J9CreateJavaVMParams *c
 	if (J9_ARE_ALL_BITS_SET(createParams->flags, J9_CREATEJAVAVM_ARGENCODING_PLATFORM)) {
 		vm->runtimeFlags |= J9_RUNTIME_ARGENCODING_UNICODE;
 	}
-#if defined(JITSERVER_SUPPORT)
+#if defined(J9VM_OPT_JITSERVER)
 	if (J9_ARE_ALL_BITS_SET(createParams->flags, J9_CREATEJAVAVM_START_JITSERVER)) {
 		vm->extendedRuntimeFlags2 |= J9_EXTENDED_RUNTIME2_ENABLE_START_JITSERVER;
 	}
-#endif /* JITSERVER_SUPPORT */
+#endif /* J9VM_OPT_JITSERVER */
 
 	initArgs.j2seVersion = createParams->j2seVersion;
 	initArgs.j2seRootDirectory = createParams->j2seRootDirectory;
@@ -2202,8 +2202,8 @@ IDATA VMInitStages(J9JavaVM *vm, IDATA stage, void* reserved) {
 			}
 
 #if defined(J9VM_OPT_VALHALLA_VALUE_TYPES)
-			/* TODO pick a reasonable default */
-			vm->valueFlatteningThreshold = UDATA_MAX;
+			/* By default flattening is disabled */
+			vm->valueFlatteningThreshold = 0;
 			if ((argIndex = FIND_AND_CONSUME_ARG(STARTSWITH_MATCH, VMOPT_VALUEFLATTENINGTHRESHOLD_EQUALS, NULL)) >= 0) {
 				UDATA threshold = 0;
 				char *optname = VMOPT_VALUEFLATTENINGTHRESHOLD_EQUALS;
@@ -2827,6 +2827,45 @@ modifyDllLoadTable(J9JavaVM * vm, J9Pool* loadTable, J9VMInitArgs* j9vm_args)
 			UDATA openFlags = (entry->loadFlags & XRUN_LIBRARY) ? J9PORT_SLOPEN_DECORATE | J9PORT_SLOPEN_LAZY : J9PORT_SLOPEN_DECORATE;
 			UDATA jitFileHandle = 0;
 			UDATA rc = 0;
+
+			/*
+			* On Linux on Z libj9jit dynamically loads libj9zlib as it is used for AOT method data compression
+			* which is currently only enabled on Z platform. We want to ensure that when the JVM loads libj9jit,
+			* libj9zlib is already loaded. See eclipse/openj9#8561 for more details.
+			*/
+#if (defined(S390) && defined(LINUX))
+			{
+			char zlibDll[EsMaxPath];
+			char *zlibDllDir = zlibDll;
+			UDATA expectedZlibPathLength = 0;
+			UDATA zlibDllLength = 0;
+			UDATA zlibFileHandle = 0;
+			UDATA zlibRC = 0;
+			
+			zlibDllLength = strlen(vm->j9libvmDirectory);
+			expectedZlibPathLength = zlibDllLength + (sizeof(DIR_SEPARATOR_STR) - 1) + strlen(J9_ZIP_DLL_NAME) + 1;
+			if (expectedZlibPathLength > EsMaxPath) {
+				zlibDllDir = j9mem_allocate_memory(expectedZlibPathLength, OMRMEM_CATEGORY_VM);
+				if (NULL == zlibDllDir) {
+					return JNI_ERR;
+				}
+			}
+			j9str_printf(PORTLIB, zlibDllDir, expectedZlibPathLength, "%s%s%s",
+					vm->j9libvmDirectory, DIR_SEPARATOR_STR, J9_ZIP_DLL_NAME);
+			zlibFileHandle = j9sl_open_shared_library(zlibDllDir, &(entry->descriptor), openFlags);
+			if (0 != zlibFileHandle) {
+				j9tty_printf(PORTLIB, "Error: Failed to open zlib DLL %s (%s)\n", zlibDllDir, j9error_last_error_message());
+				zlibRC = JNI_ERR;
+			}
+			if (zlibDll != zlibDllDir) {
+				j9mem_free_memory(zlibDllDir);
+				zlibDllDir = NULL;
+			}
+			if (zlibRC != 0) {
+				return JNI_ERR;
+			}
+			}
+#endif /* defined(S390) && defined(LINUX) */
 			
 			optionValueOperations(PORTLIB, j9vm_args, xxjitdirectoryIndex, GET_OPTION, &jitdirectoryValue, 0, '=', 0, NULL); /* get option value for xxjitdirectory= */
 			jitDirectoryLength = strlen(jitdirectoryValue);
@@ -2845,6 +2884,7 @@ modifyDllLoadTable(J9JavaVM * vm, J9Pool* loadTable, J9VMInitArgs* j9vm_args)
 			}
 			j9str_printf(PORTLIB, dllCheckPathPtr, expectedPathLength, "%s%s%s",
 					jitdirectoryValue, DIR_SEPARATOR_STR, entry->dllName);
+
 			jitFileHandle = j9sl_open_shared_library(dllCheckPathPtr, &(entry->descriptor), openFlags);
 			/* Confirm that we have a valid path being set */
 			if (0 == jitFileHandle) {
@@ -5751,16 +5791,38 @@ protectedInitializeJavaVM(J9PortLibrary* portLibrary, void * userData)
 #endif
 
 	PORT_ACCESS_FROM_PORT(portLibrary);
-	IDATA queryResult = 0;
-	J9CacheInfoQuery cQuery = {0};
-	cQuery.cmd = J9PORT_CACHEINFO_QUERY_LINESIZE;
-	cQuery.level = 1;
-	cQuery.cacheType = J9PORT_CACHEINFO_DCACHE;
-	queryResult = j9sysinfo_get_cache_info(&cQuery);
-	if (queryResult > 0) {
-		vm->dCacheLineSize = (UDATA)queryResult;
-	} else {
-		Trc_VM_contendedLinesizeFailed(queryResult);
+
+	/* check processor support for cache writeback */
+	vm->dCacheLineSize = 0;
+	vm->cpuCacheWritebackCapabilities = 0;
+#if defined(J9X86) || defined(J9HAMMER)
+	{
+		J9ProcessorDesc desc;
+		j9sysinfo_get_processor_description(&desc);
+		/* cache line size in bytes is the value of bits 8-15 * 8 */
+		vm->dCacheLineSize = ((desc.features[2] & 0xFF00) >> 8) * 8;
+		if (j9sysinfo_processor_has_feature(&desc, J9PORT_X86_FEATURE_CLWB)) {
+			vm->cpuCacheWritebackCapabilities = J9PORT_X86_FEATURE_CLWB;
+		} else if (j9sysinfo_processor_has_feature(&desc, J9PORT_X86_FEATURE_CLFLUSHOPT)) {
+			vm->cpuCacheWritebackCapabilities = J9PORT_X86_FEATURE_CLFLUSHOPT;
+		} else if (j9sysinfo_processor_has_feature(&desc, J9PORT_X86_FEATURE_CLFSH)) {
+			vm->cpuCacheWritebackCapabilities = J9PORT_X86_FEATURE_CLFSH;
+		}
+	}
+#endif /* x86 */
+
+	if (vm->dCacheLineSize == 0) {
+		IDATA queryResult = 0;
+		J9CacheInfoQuery cQuery = {0};
+		cQuery.cmd = J9PORT_CACHEINFO_QUERY_LINESIZE;
+		cQuery.level = 1;
+		cQuery.cacheType = J9PORT_CACHEINFO_DCACHE;
+		queryResult = j9sysinfo_get_cache_info(&cQuery);
+		if (queryResult > 0) {
+			vm->dCacheLineSize = (UDATA)queryResult;
+		} else {
+			Trc_VM_contendedLinesizeFailed(queryResult);
+		}
 	}
 
 	/* check for -Xipt flag and run the iconv_global_init accordingly.

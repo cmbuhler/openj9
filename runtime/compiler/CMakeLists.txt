@@ -1,5 +1,5 @@
 ################################################################################
-# Copyright (c) 2017, 2019 IBM Corp. and others
+# Copyright (c) 2017, 2020 IBM Corp. and others
 #
 # This program and the accompanying materials are made available under
 # the terms of the Eclipse Public License 2.0 which accompanies this
@@ -80,10 +80,9 @@ add_custom_command(
 )
 add_custom_target(j9jit_tracegen DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/env/ut_j9jit.h)
 
-# JITSERVER_SUPPORT, protobuf, and Persistent Loggers (MongoDB and Apache Cassandra)
-if(JITSERVER_SUPPORT)
+# J9VM_OPT_JITSERVER and protobuf and Persistent Loggers
+if(J9VM_OPT_JITSERVER)
 	message(STATUS "JITServer is supported")
-	add_definitions(-DJITSERVER_SUPPORT)
 
 	include(FindProtobuf)
 	set(Protobuf_USE_STATIC_LIBS ON)
@@ -137,9 +136,11 @@ if(JITSERVER_SUPPORT)
 	#Check for environment variable enabling the persistent logger
 	if(PERSISTENT_LOGGER EQUAL MONGODB)
 		add_definitions(-DMONGO_LOGGER)
+		add_definitions(-DPERSISTENT_LOGGING_SUPPORT)
 	endif()
 	if(PERSISTENT_LOGGER EQUAL CASSANDRA)
 		add_definitions(-DCASSANDRA_LOGGER)
+		add_definitions(-DPERSISTENT_LOGGING_SUPPORT)
 	endif()
 endif()
 
@@ -179,7 +180,7 @@ add_subdirectory(optimizer)
 add_subdirectory(ras)
 add_subdirectory(runtime)
 
-if(JITSERVER_SUPPORT)
+if(J9VM_OPT_JITSERVER)
 	j9jit_files(${CMAKE_CURRENT_SOURCE_DIR}/net/gen/compile.pb.cpp)
 	add_subdirectory(net)
 endif()
@@ -235,7 +236,6 @@ get_target_property(compiler_defines j9vm_compiler_defines INTERFACE_COMPILE_DEF
 # Extra defines not provided by the create_omr_compiler_library call
 set(TARGET_DEFINES
 	J9_PROJECT_SPECIFIC
-	_LONG_LONG
 	${compiler_defines}
 )
 
@@ -296,7 +296,7 @@ if(OMR_OS_LINUX OR OMR_OS_OSX)
 		-fno-threadsafe-statics
 		-Wno-invalid-offsetof
 	)
-	if(NOT JITSERVER_SUPPORT)
+	if(NOT J9VM_OPT_JITSERVER)
 		set(J9_CXXFLAGS
 			${J9_CXXFLAGS}
 			-fno-rtti
@@ -354,7 +354,7 @@ add_dependencies(j9jit
 	j9jit_generate
 )
 
-if(JITSERVER_SUPPORT)
+if(J9VM_OPT_JITSERVER)
 	add_dependencies(j9jit j9jit_proto)
 endif()
 
@@ -374,7 +374,7 @@ target_link_libraries(j9jit
 		${CMAKE_DL_LIBS}
 )
 
-if(JITSERVER_SUPPORT)
+if(J9VM_OPT_JITSERVER)
 	target_link_libraries(j9jit PRIVATE ${PROTOBUF_LIBRARY})
 endif()
 

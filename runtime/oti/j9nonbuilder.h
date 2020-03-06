@@ -3701,11 +3701,11 @@ typedef struct J9JITConfig {
 	void ( *jitIllegalFinalFieldModification)(struct J9VMThread *currentThread, struct J9Class *fieldClass);
 	U_8* (*codeCacheWarmAlloc)(void *codeCache);
 	U_8* (*codeCacheColdAlloc)(void *codeCache);
-#if defined(JITSERVER_SUPPORT)
+#if defined(J9VM_OPT_JITSERVER)
 	int32_t (*startJITServer)(struct J9JITConfig *jitConfig);
 	int32_t (*waitJITServerTermination)(struct J9JITConfig *jitConfig);
 	uint64_t clientUID;
-#endif /* JITSERVER_SUPPORT */
+#endif /* J9VM_OPT_JITSERVER */
 } J9JITConfig;
 
 #define J9JIT_GROW_CACHES  0x100000
@@ -4434,9 +4434,9 @@ typedef struct J9InternalVMFunctions {
 #endif /* J9VM_OPT_VALHALLA_NESTMATES */
 	BOOLEAN ( *areValueTypesEnabled)(struct J9JavaVM *vm);
 	J9Class* ( *peekClassHashTable)(struct J9VMThread* currentThread, J9ClassLoader* classLoader, U_8* className, UDATA classNameLength);
-#if defined(JITSERVER_SUPPORT)
+#if defined(J9VM_OPT_JITSERVER)
 	BOOLEAN ( *isJITServerEnabled )(struct J9JavaVM *vm);
-#endif /* JITSERVER_SUPPORT */
+#endif /* J9VM_OPT_JITSERVER */
 	IDATA ( *createJoinableThreadWithCategory)(omrthread_t* handle, UDATA stacksize, UDATA priority, UDATA suspend, omrthread_entrypoint_t entrypoint, void* entryarg, U_32 category) ;
 	BOOLEAN ( *valueTypeCapableAcmp)(struct J9VMThread *currentThread, j9object_t lhs, j9object_t rhs) ;
 } J9InternalVMFunctions;
@@ -4774,7 +4774,6 @@ typedef struct J9JavaVM {
 	U_32 extendedRuntimeFlags2;
 	UDATA zeroOptions;
 	struct J9ClassLoader* systemClassLoader;
-	struct J9ClassLoader *platformClassLoader;
 	UDATA sigFlags;
 	void* vmLocalStorageFunctions;
 	omrthread_monitor_t unsafeMemoryTrackingMutex;
@@ -4837,6 +4836,7 @@ typedef struct J9JavaVM {
 	UDATA rsOverflow;
 	UDATA maxStackUse;
 	UDATA maxCStackUse;
+	/* extensionClassLoader holds the platform class loader in Java 11+ */
 	struct J9ClassLoader* extensionClassLoader;
 	struct J9ClassLoader* applicationClassLoader;
 	UDATA doPrivilegedMethodID1;
@@ -5114,6 +5114,11 @@ typedef struct J9JavaVM {
 	UDATA valueFlatteningThreshold;
 #endif /* defined(J9VM_OPT_VALHALLA_VALUE_TYPES) */
 	UDATA dCacheLineSize;
+	/* Indicates processor support for committing cache lines to memory. On X86,
+	 * examples would be CLFLUSH or CLWB instructions. This field takes the value
+	 * of the feature constants listed in j9port.h
+	 */
+	U_32 cpuCacheWritebackCapabilities;
 } J9JavaVM;
 
 #define J9VM_PHASE_NOT_STARTUP  2

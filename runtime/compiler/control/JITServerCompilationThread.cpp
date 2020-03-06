@@ -89,7 +89,7 @@ outOfProcessCompilationEnd(
 
    // Pack log file to send to client
    std::string logFileStr = TR::Options::packLogFile(comp->getOutFile());
-
+   #ifdef PERSISTENT_LOGGING_SUPPORT
    if (comp-> getOption(TR_PersistLogging)) {
       // insert persistent logging implementation
       uint64_t clientUID = entry->getClientUID();
@@ -112,23 +112,23 @@ outOfProcessCompilationEnd(
       std::string persistentLoggingDatabaseName = compInfoPT->getCompilationInfo()->getPersistentInfo()->getJITServerPersistentLoggingDatabaseName();
       std::cout << "what is the persistent logging database Name ? " << persistentLoggingDatabaseName << std::endl;
 
-#if defined CASSANDRA_LOGGER || defined MONGO_LOGGER
-      auto* pInfo - compInfoPT->getCompilationInfo()->getPersistentInfo();
-      std::string dbip = pInfo->getJITServerPersistentLoggingDatabaseAddress();
-      if (dbip == ""){
-          dbip = "127.0.0.1"
-      }
+// #if defined CASSANDRA_LOGGER || defined MONGO_LOGGER
+//       auto* pInfo - compInfoPT->getCompilationInfo()->getPersistentInfo();
+//       std::string dbip = pInfo->getJITServerPersistentLoggingDatabaseAddress();
+//       if (dbip == ""){
+//           dbip = "127.0.0.1"
+//       }
 
-      std::string dbport = pInfo->getJITServerPersistentLoggingPort();
-      if (dbport == ""){
-#ifdef MONGO_LOGGER
-          dbport = "27017";
-#endif //MONGO_LOGGER
-#ifdef CASSANDRA_LOGGER
-          dbport = "9042";
-#endif // CASSANDRA_LOGGER
-      }
-#endif //CASSANDRA_LOGGER || MONGO_LOGGER
+//       std::string dbport = pInfo->getJITServerPersistentLoggingPort();
+//       if (dbport == ""){
+// #ifdef MONGO_LOGGER
+//           dbport = "27017";
+// #endif //MONGO_LOGGER
+// #ifdef CASSANDRA_LOGGER
+//           dbport = "9042";
+// #endif // CASSANDRA_LOGGER
+//       }
+// #endif //CASSANDRA_LOGGER || MONGO_LOGGER
 
 
 #ifdef CASSANDRA_LOGGER
@@ -145,6 +145,7 @@ outOfProcessCompilationEnd(
       logger->disconnect();
 #endif // MONGO_LOGGER
    }
+#endif // PERSISTENT_LOGGING_SUPPORT
 
    std::string svmSymbolToIdStr;
    if (comp->getOption(TR_UseSymbolValidationManager))
