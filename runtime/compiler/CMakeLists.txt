@@ -136,9 +136,11 @@ if(J9VM_OPT_JITSERVER)
 	#Check for environment variable enabling the persistent logger
 	if(PERSISTENT_LOGGER EQUAL MONGODB)
 		add_definitions(-DMONGO_LOGGER)
+		add_definitions(-DPERSISTENT_LOGGING_SUPPORT)
 	endif()
 	if(PERSISTENT_LOGGER EQUAL CASSANDRA)
 		add_definitions(-DCASSANDRA_LOGGER)
+		add_definitions(-DPERSISTENT_LOGGING_SUPPORT)
 	endif()
 endif()
 
