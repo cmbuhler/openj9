@@ -113,16 +113,16 @@ outOfProcessCompilationEnd(
       std::cout << "what is the persistent logging database Name ? " << persistentLoggingDatabaseName << std::endl;
 
 #ifdef CASSANDRA_LOGGER
-      auto* logger = new CassandraLogger("127.0.0.1", "27017", "jitserver_logs", "jitserver", "jitserver");
+      auto* logger = new CassandraLogger(persistentLoggingDatabaseAddress, std::to_string(persistentLoggingDatabasePort), persistentLoggingDatabaseName,persistentLoggingDatabaseUsername, persistentLoggingDatabasePassword);
       logger->connect();
-      logger->logMethod(std::string(compInfoPT->getCompilation()->signature()), std::to_string(entry->getClientUID()), logFileStr);
+      logger->logMethod(std::string(methodSignature), std::to_string(clientUID), logFileStr);
       logger->disconnect();
 #endif // CASSANDRA_LOGGER
 
 #ifdef MONGO_LOGGER
-      auto* logger = new MongoLogger("127.0.0.1", "27017", "jitserver_logs", "jitserver", "jitserver");
+      auto* logger = new MongoLogger(persistentLoggingDatabaseAddress, std::to_string(persistentLoggingDatabasePort), persistentLoggingDatabaseName,persistentLoggingDatabaseUsername, persistentLoggingDatabasePassword);
       logger->connect();
-      logger->logMethod(std::string(compInfoPT->getCompilation()->signature()), std::to_string(entry->getClientUID()), logFileStr);
+      logger->logMethod(std::string(methodSignature), std::to_string(clientUID), logFileStr);
       logger->disconnect();
 #endif // MONGO_LOGGER
    }

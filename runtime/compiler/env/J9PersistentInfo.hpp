@@ -133,7 +133,13 @@ class PersistentInfo : public OMR::PersistentInfoConnector
          _remoteCompilationMode(JITServer::NONE),
          _JITServerAddress("localhost"),
          _JITServerPort(38400),
-         _JITServerPersistentLoggingDatabasePort(0),
+         #ifdef CASSANDRA_LOGGER
+         _JITServerPersistentLoggingDatabasePort(9042),
+         #endif //CASSANDRA_LOGGER
+
+         #ifdef MONGO_LOGGER
+         _JITServerPersistentLoggingDatabasePort(27017),
+         #endif //MONGO_LOGGER
          _JITServerPersistentLoggingDatabaseAddress("127.0.0.1"),
          _JITServerPersistentLoggingDatabaseUsername("admin"),
          _JITServerPersistentLoggingDatabaseName("jitserver_logs"),
