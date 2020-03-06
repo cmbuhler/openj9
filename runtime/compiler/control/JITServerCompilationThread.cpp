@@ -132,22 +132,14 @@ outOfProcessCompilationEnd(
 
 
 #ifdef CASSANDRA_LOGGER
-<<<<<<< HEAD
       auto* logger = new CassandraLogger(persistentLoggingDatabaseAddress, std::to_string(persistentLoggingDatabasePort), persistentLoggingDatabaseName,persistentLoggingDatabaseUsername, persistentLoggingDatabasePassword);
-=======
-      auto* logger = new CassandraLogger(dbip, dbport, "jitserver_logs", "jitserver", "jitserver");
->>>>>>> 9f3d82f9c7155bafa7bdd474395bd9b7084d0ab1
       logger->connect();
       logger->logMethod(std::string(methodSignature), std::to_string(clientUID), logFileStr);
       logger->disconnect();
 #endif // CASSANDRA_LOGGER
 
 #ifdef MONGO_LOGGER
-<<<<<<< HEAD
       auto* logger = new MongoLogger(persistentLoggingDatabaseAddress, std::to_string(persistentLoggingDatabasePort), persistentLoggingDatabaseName,persistentLoggingDatabaseUsername, persistentLoggingDatabasePassword);
-=======
-      auto* logger = new MongoLogger(dbip, "27017", "jitserver_logs", "jitserver", "jitserver");
->>>>>>> 9f3d82f9c7155bafa7bdd474395bd9b7084d0ab1
       logger->connect();
       logger->logMethod(std::string(methodSignature), std::to_string(clientUID), logFileStr);
       logger->disconnect();
