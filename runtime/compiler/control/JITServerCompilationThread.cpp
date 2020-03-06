@@ -94,23 +94,22 @@ outOfProcessCompilationEnd(
       // insert persistent logging implementation
       uint64_t clientUID = entry->getClientUID();
       const char* methodSignature = compInfoPT->getCompilation()->signature();
-
-      std::cout << "Persistent Logging enabled" << std::endl;
-      std::cout << "Found Client id: " << clientUID << std:: endl;
+      printf("Persistent Logging enabled\n");
+      printf("found client id: %llu\n", clientUID);
       printf("potential method full name: %s\n",methodSignature);
       uint32_t persistentLoggingDatabasePort = compInfoPT->getCompilationInfo()->getPersistentInfo()->getJITServerPersistentLoggingDatabasePort();
-      std::cout << "what is the persistent logging database port ? " << persistentLoggingDatabasePort << std::endl;
+      printf("what is the persistent logging database port ? %lu\n",persistentLoggingDatabasePort);
       std::string persistentLoggingDatabaseAddress = compInfoPT->getCompilationInfo()->getPersistentInfo()->getJITServerPersistentLoggingDatabaseAddress();
-      std::cout << "what is the persistent logging database Address ? " << persistentLoggingDatabaseAddress << std::endl;
+      printf("what is the persistent logging database Address ? %s\n",persistentLoggingDatabaseAddress);
 
       std::string persistentLoggingDatabaseUsername = compInfoPT->getCompilationInfo()->getPersistentInfo()->getJITServerPersistentLoggingDatabaseUsername();
-      std::cout << "what is the persistent logging database Username ? " << persistentLoggingDatabaseUsername << std::endl;
+      printf("what is the persistent logging database Username ? %s\n",persistentLoggingDatabaseUsername);
 
       std::string persistentLoggingDatabasePassword = compInfoPT->getCompilationInfo()->getPersistentInfo()->getJITServerPersistentLoggingDatabasePassword();
-      std::cout << "what is the persistent logging database Password ? " << persistentLoggingDatabasePassword << std::endl;
+      printf("what is the persistent logging database Password ? %s\n",persistentLoggingDatabasePassword);
 
       std::string persistentLoggingDatabaseName = compInfoPT->getCompilationInfo()->getPersistentInfo()->getJITServerPersistentLoggingDatabaseName();
-      std::cout << "what is the persistent logging database Name ? " << persistentLoggingDatabaseName << std::endl;
+      printf("what is the persistent logging database Name ? %s\n",persistentLoggingDatabaseName);
 
 // #if defined CASSANDRA_LOGGER || defined MONGO_LOGGER
 //       auto* pInfo - compInfoPT->getCompilationInfo()->getPersistentInfo();
