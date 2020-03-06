@@ -549,13 +549,8 @@ ifneq ($(J9VM_OPT_JITSERVER),)
         C_INCLUDES+=$(OPENSSL_DIR)
         CXX_INCLUDES+=$(OPENSSL_DIR)
     endif
-<<<<<<< HEAD
-	#TODO: Add MONGO_LOGGER_SUPPORT flag check
-    ifneq (1,0)
-=======
 
     ifeq ($(PERSISTENT_LOGGER),MONGODB)
->>>>>>> IMplement environment variable ifdef wrapper thing
     	CXX_INCLUDES+=/usr/include/mongocxx/v_noabi
     	CXX_INCLUDES+=/usr/include/bsoncxx/v_noabi
     endif
