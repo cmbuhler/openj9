@@ -112,15 +112,34 @@ outOfProcessCompilationEnd(
       std::string persistentLoggingDatabaseName = compInfoPT->getCompilationInfo()->getPersistentInfo()->getJITServerPersistentLoggingDatabaseName();
       std::cout << "what is the persistent logging database Name ? " << persistentLoggingDatabaseName << std::endl;
 
+#if defined CASSANDRA_LOGGER || defined MONGO_LOGGER
+      auto* pInfo - compInfoPT->getCompilationInfo()->getPersistentInfo();
+      std::string dbip = pInfo->getJITServerPersistentLoggingDatabaseAddress();
+      if (dbip == ""){
+          dbip = "127.0.0.1"
+      }
+
+      std::string dbport = pInfo->getJITServerPersistentLoggingPort();
+      if (dbport == ""){
+#ifdef MONGO_LOGGER
+          dbport = "27017";
+#endif //MONGO_LOGGER
 #ifdef CASSANDRA_LOGGER
-      auto* logger = new CassandraLogger("127.0.0.1", "27017", "jitserver_logs", "jitserver", "jitserver");
+          dbport = "9042";
+#endif // CASSANDRA_LOGGER
+      }
+#endif //CASSANDRA_LOGGER || MONGO_LOGGER
+
+
+#ifdef CASSANDRA_LOGGER
+      auto* logger = new CassandraLogger(dbip, dbport, "jitserver_logs", "jitserver", "jitserver");
       logger->connect();
       logger->logMethod(std::string(compInfoPT->getCompilation()->signature()), std::to_string(entry->getClientUID()), logFileStr);
       logger->disconnect();
 #endif // CASSANDRA_LOGGER
 
 #ifdef MONGO_LOGGER
-      auto* logger = new MongoLogger("127.0.0.1", "27017", "jitserver_logs", "jitserver", "jitserver");
+      auto* logger = new MongoLogger(dbip, "27017", "jitserver_logs", "jitserver", "jitserver");
       logger->connect();
       logger->logMethod(std::string(compInfoPT->getCompilation()->signature()), std::to_string(entry->getClientUID()), logFileStr);
       logger->disconnect();
