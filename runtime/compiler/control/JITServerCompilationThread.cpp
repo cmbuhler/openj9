@@ -91,6 +91,9 @@ outOfProcessCompilationEnd(
    std::string logFileStr = TR::Options::packLogFile(comp->getOutFile());
    std::cout << "Pre Persistent Logging Section" << std::endl;
    std::cout << comp->getOption(TR_PersistLogging) << std::endl;
+   #ifdef PERSISTENT_LOGGING_SUPPORT
+   printf("PERSISTENT_LOGGING_SUPPORT is defined\n");
+   #endif 
 #ifdef PERSISTENT_LOGGING_SUPPORT
    std::cout << "Post Persistent Logging Section" << std::endl;
    std::cout << comp->getOption(TR_PersistLogging) << std::endl;
