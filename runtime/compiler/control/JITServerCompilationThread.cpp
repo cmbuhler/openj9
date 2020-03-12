@@ -92,9 +92,10 @@ outOfProcessCompilationEnd(
    std::cout << "Pre Persistent Logging Section" << std::endl;
    std::cout << comp->getOption(TR_PersistLogging) << std::endl;
 #ifdef PERSISTENT_LOGGING_SUPPORT
+   
    std::cout << "Post Persistent Logging Section" << std::endl;
    std::cout << comp->getOption(TR_PersistLogging) << std::endl;
-   if (comp->getOption(TR_PersistLogging)) {
+//   if (comp->getOption(TR_PersistLogging)) {
       uint64_t clientUID = entry->getClientUID();
       const char* methodSignature = compInfoPT->getCompilation()->signature();
 
@@ -116,20 +117,21 @@ outOfProcessCompilationEnd(
       std::cout << "what is the persistent logging database Name ? " << persistentLoggingDatabaseName << std::endl;
 
 #ifdef CASSANDRA_LOGGER
-      auto* logger = new CassandraLogger(persistentLoggingDatabaseAddress, std::to_string(persistentLoggingDatabasePort), persistentLoggingDatabaseName,persistentLoggingDatabaseUsername, persistentLoggingDatabasePassword);
+      CassandraLogger* logger = new CassandraLogger(persistentLoggingDatabaseAddress, std::to_string(persistentLoggingDatabasePort), persistentLoggingDatabaseName,persistentLoggingDatabaseUsername, persistentLoggingDatabasePassword);
       logger->connect();
       logger->logMethod(std::string(methodSignature), std::to_string(clientUID), logFileStr);
       logger->disconnect();
+      std::cout << "Im Cassandra" << std::endl;
 #endif // CASSANDRA_LOGGER
 
 #ifdef MONGO_LOGGER
-//      auto* logger = new MongoLogger(persistentLoggingDatabaseAddress, std::to_string(persistentLoggingDatabasePort), persistentLoggingDatabaseName,persistentLoggingDatabaseUsername, persistentLoggingDatabasePassword);
-//      logger->connect();
-//      logger->logMethod(std::string(methodSignature), std::to_string(clientUID), logFileStr);
-//      logger->disconnect();
+      MongoLogger* logger = new MongoLogger(persistentLoggingDatabaseAddress, std::to_string(persistentLoggingDatabasePort), persistentLoggingDatabaseName,persistentLoggingDatabaseUsername, persistentLoggingDatabasePassword);
+      logger->connect();
+      logger->logMethod(std::string(methodSignature), std::to_string(clientUID), logFileStr);
+      logger->disconnect();
       std::cout << "Im mongo" << std::endl;
 #endif // MONGO_LOGGER
-   }
+//   }
 #else
    std::cout << "I am HEre!" << std::endl;
 #endif // PERSISTENT_LOGGING_SUPPORT
