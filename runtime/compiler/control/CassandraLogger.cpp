@@ -2,13 +2,13 @@
 #include <iostream>
 
 #include "CassandraLogger.hpp"
-CassandraLogger::CassandraLogger(std::string const &databaseIP, std::string const &databasePort, std::string const &databaseName): BasePersistentLogger(databaseIP, databasePort, databaseName){
+CassandraLogger::CassandraLogger(std::string const &databaseIP, std::uint32_t databasePort, std::string const &databaseName): BasePersistentLogger(databaseIP, databasePort, databaseName){
     _session = NULL;
     _connectFuture = NULL;
     _cluster = NULL;
 }
 
-CassandraLogger::CassandraLogger(std::string const &databaseIP, std::string const &databasePort,
+CassandraLogger::CassandraLogger(std::string const &databaseIP, std::uint32_t databasePort,
         std::string const &databaseName, std::string const &databaseUsername, std::string const &databasePassword)
         : BasePersistentLogger(databaseIP, databasePort, databaseName, databaseUsername, databasePassword){
     _session = NULL;
@@ -86,7 +86,7 @@ bool CassandraLogger::connect() {
     }
 
     /*Set port number*/
-    CassError rc_set_port = cass_cluster_set_port(_cluster, stoi(_databasePort));
+    CassError rc_set_port = cass_cluster_set_port(_cluster, _databasePort);
     if (rc_set_port != CASS_OK) {
         std::cout << cass_error_desc(rc_set_port) << std::endl;
         return false;
@@ -109,7 +109,7 @@ bool CassandraLogger::connect() {
 }
 
 
-bool CassandraLogger::logMethod(std::string const &method, std::string const &clientID, std::string const &logContent){
+bool CassandraLogger::logMethod(std::string const &method,std::uint64_t clientID, std::string const &logContent){
     
     // create table space and table first
     if (!createKeySpace()) return false;
@@ -120,7 +120,7 @@ bool CassandraLogger::logMethod(std::string const &method, std::string const &cl
     = cass_statement_new(queryString.c_str(), 5);
 
     /* Bind the values using the indices of the bind variables */
-    CassError rc_set_bind_pk = cass_statement_bind_string(statement, 0, clientID.c_str());
+    CassError rc_set_bind_pk = cass_statement_bind_string(statement, 0, (std::to_string(clientID)).c_str());
     if (rc_set_bind_pk != CASS_OK) {
         std::cout << cass_error_desc(rc_set_bind_pk) << std::endl;
         cass_statement_free(statement);
