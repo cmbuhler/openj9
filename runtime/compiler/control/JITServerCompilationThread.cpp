@@ -88,37 +88,41 @@ outOfProcessCompilationEnd(
    // Pack log file to send to client
    std::string logFileStr = TR::Options::packLogFile(comp->getOutFile());
    std::cout << "Pre Persistent Logging Section" << std::endl;
-   std::cout << comp->getOption(TR_PersistLogging) << std::endl;
+   std::cout << comp->getOption(TR_PersistentLogging) << std::endl;
    #ifdef PERSISTENT_LOGGING_SUPPORT
    printf("PERSISTENT_LOGGING_SUPPORT is defined\n");
    #endif 
-#ifdef PERSISTENT_LOGGING_SUPPORT
+//#ifdef PERSISTENT_LOGGING_SUPPORT
 
-   std::cout << "Post Persistent Logging Section" << std::endl;
-   std::cout << comp->getOption(TR_PersistLogging) << std::endl;
-//   if (comp->getOption(TR_PersistLogging)) { TODO: Uncomment out and fix this flag
+   printf("Post Persistent Logging Section\n");
+   std::cout << comp->getOption(TR_PersistentLogging) << std::endl;
+   if (comp->getOption(TR_PersistentLogging))
+   { //TODO: Uncomment out and fix this flag
       uint64_t clientUID = entry->getClientUID();
       const char* methodSignature = compInfoPT->getCompilation()->signature();
-
-      std::cout << "Persistent Logging enabled" << std::endl;
-      std::cout << "Found Client id: " << clientUID << std:: endl;
+      TR::PersistentInfo* persistentInfo = compInfoPT->getCompilationInfo()->getPersistentInfo();
+      printf("Persistent Logging enabled\n");
+      printf("Found Client ID %llu\n", clientUID);
       printf("potential method full name: %s\n",methodSignature);
-      uint32_t persistentLoggingDatabasePort = compInfoPT->getCompilationInfo()->getPersistentInfo()->getJITServerPersistentLoggingDatabasePort();
-      std::cout << "what is the persistent logging database port ? " << persistentLoggingDatabasePort << std::endl;
-      std::string persistentLoggingDatabaseAddress = compInfoPT->getCompilationInfo()->getPersistentInfo()->getJITServerPersistentLoggingDatabaseAddress();
-      std::cout << "what is the persistent logging database Address ? " << persistentLoggingDatabaseAddress << std::endl;
+      uint32_t persistentLoggingDatabasePort = persistentInfo->getJITServerPersistentLoggingDatabasePort();
+      printf("what is the persistent logging database port ? %lu\n",persistentLoggingDatabasePort);
+      const std::string & persistentLoggingDatabaseAddress = persistentInfo->getJITServerPersistentLoggingDatabaseAddress();
+      std::cout << "what is the persistent logging database Address ? " <<  persistentLoggingDatabaseAddress << std::endl;
 
-      std::string persistentLoggingDatabaseUsername = compInfoPT->getCompilationInfo()->getPersistentInfo()->getJITServerPersistentLoggingDatabaseUsername();
-      std::cout << "what is the persistent logging database Username ? " << persistentLoggingDatabaseUsername << std::endl;
+      const std::string & persistentLoggingDatabaseUsername = persistentInfo->getJITServerPersistentLoggingDatabaseUsername();
+      std::cout << "what is the persistent logging database Username ? " <<  persistentLoggingDatabaseUsername << std::endl;
 
-      std::string persistentLoggingDatabasePassword = compInfoPT->getCompilationInfo()->getPersistentInfo()->getJITServerPersistentLoggingDatabasePassword();
-      std::cout << "what is the persistent logging database Password ? " << persistentLoggingDatabasePassword << std::endl;
+      const std::string & persistentLoggingDatabasePassword = persistentInfo->getJITServerPersistentLoggingDatabasePassword();
+      std::cout <<"what is the persistent logging database Password ? "<< persistentLoggingDatabasePassword << std::endl;
 
-      std::string persistentLoggingDatabaseName = compInfoPT->getCompilationInfo()->getPersistentInfo()->getJITServerPersistentLoggingDatabaseName();
-      std::cout << "what is the persistent logging database Name ? " << persistentLoggingDatabaseName << std::endl;
-
+      const std::string & persistentLoggingDatabaseName = persistentInfo->getJITServerPersistentLoggingDatabaseName();
+      std::cout << "what is the persistent logging database Name ?  " << persistentLoggingDatabaseName << std::endl; 
 #ifdef CASSANDRA_LOGGER
-      CassandraLogger* logger = new CassandraLogger(persistentLoggingDatabaseAddress, std::persistentLoggingDatabasePort, persistentLoggingDatabaseName,persistentLoggingDatabaseUsername, persistentLoggingDatabasePassword);
+      CassandraLogger* logger = new CassandraLogger(persistentLoggingDatabaseAddress,
+      persistentLoggingDatabasePort,
+      persistentLoggingDatabaseName,
+      persistentLoggingDatabaseUsername,
+      persistentLoggingDatabasePassword);
       logger->connect();
       logger->logMethod(std::string(methodSignature), clientUID, logFileStr);
       logger->disconnect();
@@ -126,16 +130,18 @@ outOfProcessCompilationEnd(
 #endif // CASSANDRA_LOGGER
 
 #ifdef MONGO_LOGGER
-      MongoLogger* logger = new MongoLogger(persistentLoggingDatabaseAddress, persistentLoggingDatabasePort, persistentLoggingDatabaseName,persistentLoggingDatabaseUsername, persistentLoggingDatabasePassword);
+      MongoLogger* logger = new MongoLogger(persistentLoggingDatabaseAddress, 
+      persistentLoggingDatabasePort,
+      persistentLoggingDatabaseName,
+      persistentLoggingDatabaseUsername,
+      persistentLoggingDatabasePassword);
       logger->connect();
       logger->logMethod(std::string(methodSignature), clientUID, logFileStr);
       logger->disconnect();
       std::cout << "Im mongo" << std::endl;
 #endif // MONGO_LOGGER
-//   }
-#else
-   std::cout << "I am HEre!" << std::endl;
-#endif // PERSISTENT_LOGGING_SUPPORT
+}
+//#endif // PERSISTENT_LOGGING_SUPPORT
 
    std::string svmSymbolToIdStr;
    if (comp->getOption(TR_UseSymbolValidationManager))

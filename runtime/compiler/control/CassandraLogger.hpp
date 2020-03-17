@@ -14,6 +14,7 @@ class CassandraLogger : public BasePersistentLogger {
         
         
     public: 
+    
         bool connect();
         void disconnect();
         CassandraLogger(std::string const &databaseIP, std::uint32_t databasePort, std::string const &databaseName,
