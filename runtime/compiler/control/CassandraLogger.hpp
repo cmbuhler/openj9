@@ -16,10 +16,10 @@ class CassandraLogger : public BasePersistentLogger {
     public: 
         bool connect();
         void disconnect();
-        CassandraLogger(std::string const &databaseIP, std::string const &databasePort, std::string const &databaseName,
+        CassandraLogger(std::string const &databaseIP, std::uint32_t databasePort, std::string const &databaseName,
                         std::string const &databaseUsername, std::string const &databasePassword);
-        CassandraLogger(std::string const &databaseIP, std::string const &databasePort, std::string const &databaseName);
-        bool logMethod(std::string const &method, std::string const &clientID, std::string const &logContent);
+        CassandraLogger(std::string const &databaseIP, std::uint32_t databasePort, std::string const &databaseName);
+        bool logMethod(std::string const &method, std::uint64_t clientID, std::string const &logContent);
        
 };
 

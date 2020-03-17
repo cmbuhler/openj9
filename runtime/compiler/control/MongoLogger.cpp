@@ -1,30 +1,31 @@
 #include "MongoLogger.hpp"
-#include <chrono>
+#include <ctime>
 #include <iostream>
-#include <bsoncxx/json.hpp>
-#include <bsoncxx/types.hpp>
-#include <mongocxx/exception/bulk_write_exception.hpp>
-#include <mongocxx/exception/logic_error.hpp>
-#include <mongocxx/stdx.hpp>
+#include "LoadDBLibs.hpp"
 
-mongocxx::instance MongoLogger::_inst = mongocxx::instance{};
-
-MongoLogger::MongoLogger(std::string const &databaseIP, std::string const &databasePort, std::string const &databaseName)
+MongoLogger::MongoLogger(std::string const &databaseIP, std::uint32_t databasePort, std::string const &databaseName)
         : BasePersistentLogger(databaseIP, databasePort, databaseName){
 
 }
 
-MongoLogger::MongoLogger(std::string const &databaseIP, std::string const &databasePort, std::string const &databaseName,
+MongoLogger::MongoLogger(std::string const &databaseIP, std::uint32_t databasePort, std::string const &databaseName,
         std::string const &databaseUsername, std::string const &databasePassword)
         : BasePersistentLogger(databaseIP, databasePort, databaseName, databaseUsername, databasePassword){
 
 }
 
+MongoLogger::~MongoLogger() {
+    //Clean up this mongoc logger.
+    Omongoc_collection_destroy(_collection);
+    Omongoc_database_destroy(_db);
+    Omongoc_uri_destroy(_uri);
+    Omongoc_client_destroy(_client);
+}
+
 std::string MongoLogger::constructURI() {
     // Check if we have the database name
     if(_databaseName.empty()){
-        // We can not connect to an unknown database.
-        return "";
+        return "jitserver_logs";
     }
 
     // Check if we have db IP and Port
@@ -32,12 +33,12 @@ std::string MongoLogger::constructURI() {
         // No IP try localhost
         _databaseIP = "127.0.0.1";
     }
-    if(_databasePort.empty()) {
+    if(!_databasePort) {
         // No Port try default MongoDB port
-        _databasePort = "27017";
+        _databasePort = 27017;
     }
 
-    std::string host = _databaseIP + ":" + _databasePort;
+    std::string host = _databaseIP + ":" + std::to_string(_databasePort);
 
     // Check if we have credentials
     std::string credentials = "";
@@ -56,16 +57,32 @@ std::string MongoLogger::constructURI() {
 }
 
 bool MongoLogger::connect() {
-    //Verify we can construct a valid Mongo Client
-    try {
-        _uri = mongocxx::uri(constructURI());
-        _client = mongocxx::client(_uri);
-        _db = _client[_databaseName];
-    } catch (const mongocxx::logic_error& e) {
-        std::cerr << "Error configuring connection to MongoDB Server: "
-            << e.what() << std::endl;
+    Obson_error_t error;
+
+    //Validate URI.
+    _uri = Omongoc_uri_new_with_error(constructURI().c_str(), &error);
+    if (!_uri) {
+        fprintf (stderr,
+                 "JITServer: Persistent Logger failed to parse URI: %s\n"
+                 "error message:       %s\n",
+                 constructURI().c_str(),
+                 error.message);
         return false;
     }
+
+    //Create a client
+    _client = Omongoc_client_new_from_uri(_uri);
+    if(!_client){
+        return false;
+    }
+
+    //Register the application name so we can track it in the profile logs
+    //on the server if we want.
+    Omongoc_client_set_appname(_client, "jitserver");
+
+    //Get a handle on the database and collection.
+    _db = Omongoc_client_get_database(_client, _databaseName.c_str());
+    _collection = Omongoc_client_get_collection (_client, _databaseName.c_str(), "logs");
 
     //Mongo is designed to be always available. Thus there is no "Connection" object
     //and you will find that the "Connection" is tested on every read/write.
@@ -77,13 +94,12 @@ void MongoLogger::disconnect() {
     return;
 }
 
-bool MongoLogger::logMethod(std::string const &method, std::string const &clientID, std::string const &logContent) {
-    mongocxx::collection logs = _db.collection("logs");
-    auto builder = bsoncxx::builder::stream::document{};
-    auto timestamp = std::chrono::system_clock::now();
-
+bool MongoLogger::logMethod(std::string const &method, std::uint64_t clientID, std::string const &logContent) {
+    struct timespec t;
+    clock_gettime(CLOCK_REALTIME, &t);
+    int64_t timestamp = t.tv_sec * INT64_C(1000) + t.tv_nsec / 1000000;
     /*
-     * The following constructs the following JSON structure:
+     * The following constructs and inserts the following JSON structure:
      * {
      *     "method" : "method/package/methodName()",
      *     "client_id" : "clientid",
@@ -91,21 +107,20 @@ bool MongoLogger::logMethod(std::string const &method, std::string const &client
      *     "timestamp" : ISODate
      * }
      */
-    bsoncxx::document::value doc_value = builder
-            << "method" << method
-            << "client_id" << clientID
-            << "log" << logContent
-            << "timestamp" << bsoncxx::types::b_date(timestamp)
-            << bsoncxx::builder::stream::finalize;
+    Obson_t *insert = Obson_new();
+    Obson_error_t error;
+    Obson_append_utf8(insert, "method", -1, method.c_str(), -1);
+    Obson_append_utf8(insert, "client_id", -1, std::to_string(clientID).c_str(), -1);
+//TODO: CONVER CLIENTID to CHAR * without using STRING.
+    Obson_append_utf8(insert, "log", -1, logContent.c_str(), -1);
+    Obson_append_date_time(insert, "timestamp", -1, timestamp);
 
-    try {
-        bsoncxx::stdx::optional<mongocxx::result::insert_one> result =
-                logs.insert_one(doc_value.view());
-    } catch (const mongocxx::bulk_write_exception& e){
-        std::cerr << "Error executing log insert query: "
-            << e.what() << std::endl;
-        return false;
+    if (!Omongoc_collection_insert_one(_collection, insert, NULL, NULL, &error)) {
+        fprintf(stderr, "JITServer: Mongo Logger failed to insert log.\n"
+                        "error message: %s\n", error.message);
     }
+
+    Obson_destroy (insert);
 
     return true;
 }
