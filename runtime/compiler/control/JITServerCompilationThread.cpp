@@ -89,13 +89,7 @@ outOfProcessCompilationEnd(
    std::string logFileStr = TR::Options::packLogFile(comp->getOutFile());
    std::cout << "Pre Persistent Logging Section" << std::endl;
    std::cout << comp->getOption(TR_PersistentLogging) << std::endl;
-   #ifdef PERSISTENT_LOGGING_SUPPORT
-   printf("PERSISTENT_LOGGING_SUPPORT is defined\n");
-   #endif 
 //#ifdef PERSISTENT_LOGGING_SUPPORT
-
-   printf("Post Persistent Logging Section\n");
-   std::cout << comp->getOption(TR_PersistentLogging) << std::endl;
    if (comp->getOption(TR_PersistentLogging))
    { //TODO: Uncomment out and fix this flag
       uint64_t clientUID = entry->getClientUID();
