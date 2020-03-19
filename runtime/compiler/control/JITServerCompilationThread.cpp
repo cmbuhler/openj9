@@ -26,9 +26,9 @@
 #include "control/CompilationRuntime.hpp"
 #include "control/MethodToBeCompiled.hpp"
 #include "control/JITServerHelpers.hpp"
-//#ifdef CASSANDRA_LOGGER
+#ifdef CASSANDRA_LOGGER
 #include "control/CassandraLogger.hpp"
-//#endif // CASSANDRA_LOGGER
+#endif // CASSANDRA_LOGGER
 #ifdef MONGO_LOGGER
 #include "control/MongoLogger.hpp"
 #endif // MONGO_LOGGER
@@ -91,7 +91,7 @@ outOfProcessCompilationEnd(
    std::string logFileStr = TR::Options::packLogFile(comp->getOutFile());
    std::cout << "Pre Persistent Logging Section" << std::endl;
    std::cout << comp->getOption(TR_PersistentLogging) << std::endl;
-   //#ifdef PERSISTENT_LOGGING_SUPPORT
+   #ifdef PERSISTENT_LOGGING_SUPPORT
    if (comp->getOption(TR_PersistentLogging))
       {
          uint64_t clientUID = entry->getClientUID();
@@ -113,7 +113,7 @@ outOfProcessCompilationEnd(
 
          const char* persistentLoggingDatabaseName = persistentInfo->getJITServerPersistentLoggingDatabaseName();
          std::cout << "what is the persistent logging database Name ?  " << persistentLoggingDatabaseName << std::endl; 
-         //#ifdef CASSANDRA_LOGGER
+         #ifdef CASSANDRA_LOGGER
             CassandraLogger* logger = new CassandraLogger(persistentLoggingDatabaseAddress,
             persistentLoggingDatabasePort,
             persistentLoggingDatabaseName,
@@ -131,7 +131,7 @@ outOfProcessCompilationEnd(
                }
 
             std::cout << "Im Cassandra" << std::endl;
-         //#endif // CASSANDRA_LOGGER
+         #endif // CASSANDRA_LOGGER
 
          #ifdef MONGO_LOGGER
             MongoLogger* logger = new MongoLogger(persistentLoggingDatabaseAddress, 
@@ -145,7 +145,7 @@ outOfProcessCompilationEnd(
             std::cout << "Im mongo" << std::endl;
          #endif // MONGO_LOGGER
       }
-   //#endif // PERSISTENT_LOGGING_SUPPORT
+   #endif // PERSISTENT_LOGGING_SUPPORT
 
    std::string svmSymbolToIdStr;
    if (comp->getOption(TR_UseSymbolValidationManager))
