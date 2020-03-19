@@ -318,21 +318,23 @@ class PersistentInfo : public OMR::PersistentInfoConnector
    void setSocketTimeout(uint32_t t) { _socketTimeoutMs = t; }
    uint32_t getJITServerPort() const { return _JITServerPort; }
    void setJITServerPort(uint32_t port) { _JITServerPort = port; }
-   void setJITServerPersistentLoggingDatabasePort(uint32_t port) {_JITServerPersistentLoggingDatabasePort = port;}
-   uint32_t getJITServerPersistentLoggingDatabasePort() const { return _JITServerPersistentLoggingDatabasePort; }
-   void setJITServerPersistentLoggingDatabaseAddress(char *addr) {_JITServerPersistentLoggingDatabaseAddress = addr;}
-   const std::string &getJITServerPersistentLoggingDatabaseAddress() const { return _JITServerPersistentLoggingDatabaseAddress; }
+   //#if defined(PERSISTENT_LOGGING_SUPPORT)
+      void setJITServerPersistentLoggingDatabasePort(uint32_t port) {_JITServerPersistentLoggingDatabasePort = port;}
+      uint32_t getJITServerPersistentLoggingDatabasePort() const { return _JITServerPersistentLoggingDatabasePort; }
+      void setJITServerPersistentLoggingDatabaseAddress(char *addr) {_JITServerPersistentLoggingDatabaseAddress = addr;}
+      const char *getJITServerPersistentLoggingDatabaseAddress() const { return _JITServerPersistentLoggingDatabaseAddress; }
 
-   void setJITServerPersistentLoggingDatabaseUsername(char *username) {_JITServerPersistentLoggingDatabaseUsername = username;}
-   const std::string &getJITServerPersistentLoggingDatabaseUsername() const { return _JITServerPersistentLoggingDatabaseUsername; }
-   
-   void setJITServerPersistentLoggingDatabasePassword(char *password) {_JITServerPersistentLoggingDatabasePassword = password;}
-   const std::string &getJITServerPersistentLoggingDatabasePassword() const { return _JITServerPersistentLoggingDatabasePassword; }
-   
-   void setJITServerPersistentLoggingDatabaseName(char *name) {_JITServerPersistentLoggingDatabaseName = name;}
-   const std::string &getJITServerPersistentLoggingDatabaseName() const { return _JITServerPersistentLoggingDatabaseName; }
-   uint64_t getClientUID() const { return _clientUID; }
-   void setClientUID(uint64_t val) { _clientUID = val; }
+      void setJITServerPersistentLoggingDatabaseUsername(char *username) {_JITServerPersistentLoggingDatabaseUsername = username;}
+      const char *getJITServerPersistentLoggingDatabaseUsername() const { return _JITServerPersistentLoggingDatabaseUsername; }
+      
+      void setJITServerPersistentLoggingDatabasePassword(char *password) {_JITServerPersistentLoggingDatabasePassword = password;}
+      const char *getJITServerPersistentLoggingDatabasePassword() const { return _JITServerPersistentLoggingDatabasePassword; }
+      
+      void setJITServerPersistentLoggingDatabaseName(char *name) {_JITServerPersistentLoggingDatabaseName = name;}
+      const char *getJITServerPersistentLoggingDatabaseName() const { return _JITServerPersistentLoggingDatabaseName; }
+      uint64_t getClientUID() const { return _clientUID; }
+      void setClientUID(uint64_t val) { _clientUID = val; }
+   //# endif /* defined(PERSISTENT_LOGGING_SUPPORT) */
 #endif /* defined(J9VM_OPT_JITSERVER) */
 
    private:
@@ -420,10 +422,10 @@ class PersistentInfo : public OMR::PersistentInfoConnector
 #if defined(J9VM_OPT_JITSERVER)
    JITServer::RemoteCompilationModes _remoteCompilationMode; // JITServer::NONE, JITServer::CLIENT, JITServer::SERVER
    std::string _JITServerAddress;
-   std::string _JITServerPersistentLoggingDatabaseAddress;
-   std::string _JITServerPersistentLoggingDatabaseUsername;
-   std::string _JITServerPersistentLoggingDatabasePassword;
-   std::string _JITServerPersistentLoggingDatabaseName;
+   const char* _JITServerPersistentLoggingDatabaseAddress;
+   const char* _JITServerPersistentLoggingDatabaseUsername;
+   const char* _JITServerPersistentLoggingDatabasePassword;
+   const char* _JITServerPersistentLoggingDatabaseName;
    uint32_t    _JITServerPort;
    uint32_t _JITServerPersistentLoggingDatabasePort;
    uint32_t    _socketTimeoutMs; // timeout for communication sockets used in out-of-process JIT compilation

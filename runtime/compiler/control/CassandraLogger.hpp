@@ -3,25 +3,26 @@
 
 #include <cassandra.h>
 #include "BasePersistentLogger.hpp"
-class CassandraLogger : public BasePersistentLogger {
+class CassandraLogger : public BasePersistentLogger
+    {
 
     private:
         CassCluster* _cluster;
         CassSession* _session;
         CassFuture* _connectFuture;
         bool createKeySpace();
-        bool createTable(std::string const &tableName);
+        bool createTable(const char *tableName);
         
         
     public: 
     
-        bool connect();
-        void disconnect();
-        CassandraLogger(std::string const &databaseIP, std::uint32_t databasePort, std::string const &databaseName,
-                        std::string const &databaseUsername, std::string const &databasePassword);
-        CassandraLogger(std::string const &databaseIP, std::uint32_t databasePort, std::string const &databaseName);
-        bool logMethod(std::string const &method, std::uint64_t clientID, std::string const &logContent);
-       
-};
+        bool connect() override;
+        void disconnect() override;
+        CassandraLogger(const char *databaseIP, std::uint32_t databasePort, const char *databaseName,
+                        const char *databaseUsername, const char *databasePassword);
+        CassandraLogger(const char *databaseIP, std::uint32_t databasePort, const char *databaseName);
+        bool logMethod(const char *method, std::uint64_t clientID, const char *logContent) override;
+        
+    };
 
 #endif // CASSANDRALOGGER_H
