@@ -119,9 +119,17 @@ outOfProcessCompilationEnd(
             persistentLoggingDatabaseName,
             persistentLoggingDatabaseUsername,
             persistentLoggingDatabasePassword);
-            logger->connect();
-            logger->logMethod(methodSignature, clientUID, logFileStr.c_str());
-            logger->disconnect();
+            bool isConnected = logger->connect();
+            if (isConnected)
+               {
+               logger->logMethod(methodSignature, clientUID, logFileStr.c_str());
+               logger->disconnect();
+               }
+            else
+               {
+                  printf("Persistent Logging Error: Database Connection Failed\n");
+               }
+
             std::cout << "Im Cassandra" << std::endl;
          //#endif // CASSANDRA_LOGGER
 
