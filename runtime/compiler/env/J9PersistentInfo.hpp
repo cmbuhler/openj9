@@ -318,7 +318,7 @@ class PersistentInfo : public OMR::PersistentInfoConnector
    void setSocketTimeout(uint32_t t) { _socketTimeoutMs = t; }
    uint32_t getJITServerPort() const { return _JITServerPort; }
    void setJITServerPort(uint32_t port) { _JITServerPort = port; }
-   //#if defined(PERSISTENT_LOGGING_SUPPORT)
+   #if defined(PERSISTENT_LOGGING_SUPPORT)
       void setJITServerPersistentLoggingDatabasePort(uint32_t port) {_JITServerPersistentLoggingDatabasePort = port;}
       uint32_t getJITServerPersistentLoggingDatabasePort() const { return _JITServerPersistentLoggingDatabasePort; }
       void setJITServerPersistentLoggingDatabaseAddress(char *addr) {_JITServerPersistentLoggingDatabaseAddress = addr;}
@@ -334,7 +334,7 @@ class PersistentInfo : public OMR::PersistentInfoConnector
       const char *getJITServerPersistentLoggingDatabaseName() const { return _JITServerPersistentLoggingDatabaseName; }
       uint64_t getClientUID() const { return _clientUID; }
       void setClientUID(uint64_t val) { _clientUID = val; }
-   //# endif /* defined(PERSISTENT_LOGGING_SUPPORT) */
+   # endif /* defined(PERSISTENT_LOGGING_SUPPORT) */
 #endif /* defined(J9VM_OPT_JITSERVER) */
 
    private:
