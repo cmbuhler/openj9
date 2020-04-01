@@ -4176,7 +4176,7 @@ typedef struct J9InternalVMFunctions {
 	void  ( *setCurrentExceptionNLS)(struct J9VMThread * vmThread, UDATA exceptionNumber, U_32 moduleName, U_32 messageNumber) ;
 	void ( *setCurrentExceptionNLSWithArgs)(struct J9VMThread * vmThread, U_32 nlsModule, U_32 nlsID, UDATA exceptionIndex, ...) ;
 	void  ( *setCurrentExceptionWithCause)(struct J9VMThread *currentThread, UDATA exceptionNumber, UDATA *detailMessage, j9object_t cause) ;
-	IDATA  ( *objectMonitorEnter)(struct J9VMThread* vmStruct, j9object_t object) ;
+	UDATA  ( *objectMonitorEnter)(struct J9VMThread* vmStruct, j9object_t object) ;
 	IDATA  ( *objectMonitorExit)(struct J9VMThread* vmStruct, j9object_t object) ;
 	struct J9Method*  ( *resolveStaticMethodRef)(struct J9VMThread *vmStruct, J9ConstantPool *constantPool, UDATA cpIndex, UDATA resolveFlags) ;
 	struct J9Method*  ( *resolveStaticSplitMethodRef)(struct J9VMThread *vmStruct, J9ConstantPool *ramCP, UDATA splitTableIndex, UDATA resolveFlags) ;
@@ -4253,8 +4253,8 @@ typedef struct J9InternalVMFunctions {
 	void  ( *cleanupVMThreadJniArrayCache)(struct J9VMThread *vmThread) ;
 #endif /* J9VM_GC_JNI_ARRAY_CACHE */
 	struct J9ObjectMonitor *  ( *objectMonitorInflate)(struct J9VMThread* vmStruct, j9object_t object, UDATA lock) ;
-	IDATA  ( *objectMonitorEnterNonBlocking)(struct J9VMThread *currentThread, j9object_t object) ;
-	IDATA  ( *objectMonitorEnterBlocking)(struct J9VMThread *currentThread) ;
+	UDATA  ( *objectMonitorEnterNonBlocking)(struct J9VMThread *currentThread, j9object_t object) ;
+	UDATA  ( *objectMonitorEnterBlocking)(struct J9VMThread *currentThread) ;
 	void  ( *fillJITVTableSlot)(struct J9VMThread *vmStruct, UDATA *currentSlot, struct J9Method *ramMethod) ;
 	IDATA  ( *findArgInVMArgs)(J9PortLibrary *portLibrary, struct J9VMInitArgs* j9vm_args, UDATA match, const char* optionName, const char* optionValue, UDATA doConsumeArgs) ;
 	IDATA  ( *optionValueOperations)(J9PortLibrary *portLibrary, struct J9VMInitArgs* j9vm_args, IDATA element, IDATA action, char** valuesBuffer, UDATA bufSize, char delim, char separator, void* reserved) ;
@@ -5126,10 +5126,10 @@ typedef struct J9JavaVM {
 	UDATA safePointResponseCount;
 	struct J9VMRuntimeStateListener vmRuntimeStateListener;
 #if defined(J9VM_INTERP_ATOMIC_FREE_JNI_USES_FLUSH)
-#if defined(LINUX) || defined(AIXPPC)
+#if defined(J9UNIX) || defined(AIXPPC)
 	J9PortVmemIdentifier exclusiveGuardPage;
 	omrthread_monitor_t flushMutex;
-#elif defined(WIN32) /* LINUX || AIXPPC  */
+#elif defined(WIN32) /* J9UNIX || AIXPPC  */
 	void *flushFunction;
 #endif /* WIN32 */
 #endif /* J9VM_INTERP_ATOMIC_FREE_JNI_USES_FLUSH */
@@ -5175,6 +5175,16 @@ typedef struct J9JavaVM {
 #define J9VM_DEBUG_ATTRIBUTE_MAINTAIN_FULL_INLINE_MAP  0x40000
 #define J9VM_DEBUG_ATTRIBUTE_UNUSED_0x800000  0x800000
 #define J9VM_DEFLATION_POLICY_NEVER  0
+
+/* objectMonitorEnterNonBlocking return codes */
+#define J9_OBJECT_MONITOR_OOM 0
+#define J9_OBJECT_MONITOR_VALUE_TYPE_IMSE 1
+/*
+ * Currently, not needed but reserving it for future use
+ *
+ * #define J9_OBJECT_MONITOR_PRIMITIVE_WRAPPER_IMSE 2
+ */
+#define J9_OBJECT_MONITOR_BLOCKING 3
 
 #if defined(OMR_GC_COMPRESSED_POINTERS)
 #if defined(OMR_GC_FULL_POINTERS)

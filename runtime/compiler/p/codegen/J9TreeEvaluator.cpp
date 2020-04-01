@@ -483,15 +483,15 @@ TR::Register *outlinedHelperWrtbarEvaluator(TR::Node *node, TR::CodeGenerator *c
 static int32_t getOffsetOfJ9ObjectFlags()
    {
 #if defined(J9VM_INTERP_FLAGS_IN_CLASS_SLOT)
-#if defined(TR_TARGET_64BIT) && defined(OMR_GC_FULL_POINTERS)
+#if defined(TR_TARGET_64BIT)
+   if (!TR::Compiler->om.compressObjectReferences())
 #if defined(__LITTLE_ENDIAN__)
-   return TMP_OFFSETOF_J9OBJECT_CLAZZ;
+      return TMP_OFFSETOF_J9OBJECT_CLAZZ;
 #else
-   return TMP_OFFSETOF_J9OBJECT_CLAZZ + 4;
+      return TMP_OFFSETOF_J9OBJECT_CLAZZ + 4;
 #endif
-#else
+#endif
    return TMP_OFFSETOF_J9OBJECT_CLAZZ;
-#endif
 #else
 #if defined(TMP_OFFSETOF_J9OBJECT_FLAGS)
    return TMP_OFFSETOF_J9OBJECT_FLAGS;
@@ -925,13 +925,12 @@ static void VMwrtbarEvaluator(TR::Node *node, TR::Register *srcReg, TR::Register
 
 inline void generateLoadJ9Class(TR::Node* node, TR::Register* j9classReg, TR::Register *objReg, TR::CodeGenerator* cg)
    {
-#ifdef OMR_GC_COMPRESSED_POINTERS
-   generateTrg1MemInstruction(cg, TR::InstOpCode::lwz, node, j9classReg,
-      new (cg->trHeapMemory()) TR::MemoryReference(objReg, static_cast<int32_t>(TR::Compiler->om.offsetOfObjectVftField()), 4, cg));
-#else
-   generateTrg1MemInstruction(cg,TR::InstOpCode::Op_load, node, j9classReg,
-      new (cg->trHeapMemory()) TR::MemoryReference(objReg, static_cast<int32_t>(TR::Compiler->om.offsetOfObjectVftField()), TR::Compiler->om.sizeofReferenceAddress(), cg));
-#endif
+   if (TR::Compiler->om.compressObjectReferences())
+      generateTrg1MemInstruction(cg, TR::InstOpCode::lwz, node, j9classReg,
+         new (cg->trHeapMemory()) TR::MemoryReference(objReg, static_cast<int32_t>(TR::Compiler->om.offsetOfObjectVftField()), 4, cg));
+   else
+      generateTrg1MemInstruction(cg,TR::InstOpCode::Op_load, node, j9classReg,
+         new (cg->trHeapMemory()) TR::MemoryReference(objReg, static_cast<int32_t>(TR::Compiler->om.offsetOfObjectVftField()), TR::Compiler->om.sizeofReferenceAddress(), cg));
    TR::TreeEvaluator::generateVFTMaskInstruction(cg, node, j9classReg);
    }
 
@@ -1728,17 +1727,7 @@ TR::Register *iGenerateSoftwareReadBarrier(TR::Node *node, TR::CodeGenerator *cg
       TR::TreeEvaluator::postSyncConditions(node, cg, locationReg, tempMR, TR::InstOpCode::nop);
       }
 
-   // For compr refs caseL if monitored loads is supported and we are loading an address, use monitored loads instruction
-   if (node->getOpCodeValue() == TR::irdbari && cg->getSupportsLM() && node->getSymbolReference()->getSymbol()->getDataType() == TR::Address)
-      {
-      TR::MemoryReference *monitoredLoadMR = new (cg->trHeapMemory()) TR::MemoryReference(locationReg, 0, 4, cg);
-      monitoredLoadMR->forceIndexedForm(node, cg);
-      generateTrg1MemInstruction(cg, TR::InstOpCode::lwzmx, node, objReg, monitoredLoadMR);
-      }
-   else
-      {
-      generateTrg1MemInstruction(cg, TR::InstOpCode::lwz, node, objReg, new (cg->trHeapMemory()) TR::MemoryReference(locationReg, 0, 4, cg));
-      }
+   generateTrg1MemInstruction(cg, TR::InstOpCode::lwz, node, objReg, new (cg->trHeapMemory()) TR::MemoryReference(locationReg, 0, 4, cg));
 
    generateLabelInstruction(cg, TR::InstOpCode::label, node, startLabel);
    generateTrg1MemInstruction(cg, TR::InstOpCode::lwz, node, evacuateReg,
@@ -1757,17 +1746,7 @@ TR::Register *iGenerateSoftwareReadBarrier(TR::Node *node, TR::CodeGenerator *cg
    TR::SymbolReference *helperSym = comp->getSymRefTab()->findOrCreateRuntimeHelper(TR_softwareReadBarrier, false, false, false);
    generateDepImmSymInstruction(cg, TR::InstOpCode::bl, node, (uintptr_t)helperSym->getMethodAddress(), deps, helperSym);
 
-   // For compr refs caseL if monitored loads is supported and we are loading an address, use monitored loads instruction
-   if (node->getOpCodeValue() == TR::irdbari && cg->getSupportsLM() && node->getSymbolReference()->getSymbol()->getDataType() == TR::Address)
-      {
-      TR::MemoryReference *monitoredLoadMR = new (cg->trHeapMemory()) TR::MemoryReference(locationReg, 0, 4, cg);
-      monitoredLoadMR->forceIndexedForm(node, cg);
-      generateTrg1MemInstruction(cg, TR::InstOpCode::lwzmx, node, objReg, monitoredLoadMR);
-      }
-   else
-      {
-      generateTrg1MemInstruction(cg, TR::InstOpCode::lwz, node, objReg, new (cg->trHeapMemory()) TR::MemoryReference(locationReg, 0, 4, cg));
-      }
+   generateTrg1MemInstruction(cg, TR::InstOpCode::lwz, node, objReg, new (cg->trHeapMemory()) TR::MemoryReference(locationReg, 0, 4, cg));
 
    generateDepLabelInstruction(cg, TR::InstOpCode::label, node, endLabel, deps);
 
@@ -1861,17 +1840,7 @@ TR::Register *aGenerateSoftwareReadBarrier(TR::Node *node, TR::CodeGenerator *cg
       TR::TreeEvaluator::postSyncConditions(node, cg, locationReg, tempMR, TR::InstOpCode::nop);
       }
 
-   // if monitored loads is supported and we are loading an address, use monitored loads instruction
-   if (node->getOpCodeValue() == TR::ardbari && cg->getSupportsLM() && node->getSymbolReference()->getSymbol()->getDataType() == TR::Address)
-      {
-      TR::MemoryReference *monitoredLoadMR = new (cg->trHeapMemory()) TR::MemoryReference(locationReg, 0, TR::Compiler->om.sizeofReferenceAddress(), cg);
-      monitoredLoadMR->forceIndexedForm(node, cg);
-      generateTrg1MemInstruction(cg, cg->comp()->target().is64Bit() ? TR::InstOpCode::ldmx : TR::InstOpCode::lwzmx, node, tempReg, monitoredLoadMR);
-      }
-   else
-      {
-      generateTrg1MemInstruction(cg, TR::InstOpCode::Op_load, node, tempReg, new (cg->trHeapMemory()) TR::MemoryReference(locationReg, 0, TR::Compiler->om.sizeofReferenceAddress(), cg));
-      }
+   generateTrg1MemInstruction(cg, TR::InstOpCode::Op_load, node, tempReg, new (cg->trHeapMemory()) TR::MemoryReference(locationReg, 0, TR::Compiler->om.sizeofReferenceAddress(), cg));
 
    if (node->getSymbolReference() == comp->getSymRefTab()->findVftSymbolRef())
       TR::TreeEvaluator::generateVFTMaskInstruction(cg, node, tempReg);
@@ -1894,17 +1863,7 @@ TR::Register *aGenerateSoftwareReadBarrier(TR::Node *node, TR::CodeGenerator *cg
    TR::SymbolReference *helperSym = comp->getSymRefTab()->findOrCreateRuntimeHelper(TR_softwareReadBarrier, false, false, false);
    generateDepImmSymInstruction(cg, TR::InstOpCode::bl, node, (uintptr_t)helperSym->getMethodAddress(), deps, helperSym);
 
-   // if monitored loads is supported and we are loading an address, use monitored loads instruction
-   if (node->getOpCodeValue() == TR::ardbari && cg->getSupportsLM() && node->getSymbolReference()->getSymbol()->getDataType() == TR::Address)
-      {
-      TR::MemoryReference *monitoredLoadMR = new (cg->trHeapMemory()) TR::MemoryReference(locationReg, 0, TR::Compiler->om.sizeofReferenceAddress(), cg);
-      monitoredLoadMR->forceIndexedForm(node, cg);
-      generateTrg1MemInstruction(cg, cg->comp()->target().is64Bit() ? TR::InstOpCode::ldmx : TR::InstOpCode::lwzmx, node, tempReg, monitoredLoadMR);
-      }
-   else
-      {
-      generateTrg1MemInstruction(cg, TR::InstOpCode::Op_load, node, tempReg, new (cg->trHeapMemory()) TR::MemoryReference(locationReg, 0, TR::Compiler->om.sizeofReferenceAddress(), cg));
-      }
+   generateTrg1MemInstruction(cg, TR::InstOpCode::Op_load, node, tempReg, new (cg->trHeapMemory()) TR::MemoryReference(locationReg, 0, TR::Compiler->om.sizeofReferenceAddress(), cg));
 
    if (node->getSymbolReference() == comp->getSymRefTab()->findVftSymbolRef())
       TR::TreeEvaluator::generateVFTMaskInstruction(cg, node, tempReg);
@@ -3465,11 +3424,7 @@ TR::Instruction *J9::Power::TreeEvaluator::generateVFTMaskInstruction(TR::CodeGe
    {
    TR_J9VMBase *fej9 = (TR_J9VMBase *) (cg->fe());
    uintptr_t mask = TR::Compiler->om.maskOfObjectVftField();
-#ifdef OMR_GC_COMPRESSED_POINTERS
-   bool isCompressed = true;
-#else
-   bool isCompressed = false;
-#endif
+   bool isCompressed = TR::Compiler->om.compressObjectReferences();
    if (~mask == 0)
       {
       // no mask instruction required
@@ -5348,16 +5303,15 @@ TR::Register * J9::Power::TreeEvaluator::VMgenCoreInstanceofEvaluator(TR::Node *
 
    if (testEqualClass || testCache || testCastClassIsSuper)
       {
-#ifdef OMR_GC_COMPRESSED_POINTERS
-      // read only 32 bits
-      iCursor = generateTrg1MemInstruction(cg, TR::InstOpCode::lwz, node, objClassReg,
-            new (cg->trHeapMemory()) TR::MemoryReference(objectReg,
-                  (int32_t) TR::Compiler->om.offsetOfObjectVftField(), 4, cg),
-            iCursor);
-#else
-      iCursor = generateTrg1MemInstruction(cg,TR::InstOpCode::Op_load, node, objClassReg,
-            new (cg->trHeapMemory()) TR::MemoryReference(objectReg, (int32_t) TR::Compiler->om.offsetOfObjectVftField(), TR::Compiler->om.sizeofReferenceAddress(), cg), iCursor);
-#endif
+      if (TR::Compiler->om.compressObjectReferences())
+        // read only 32 bits
+         iCursor = generateTrg1MemInstruction(cg, TR::InstOpCode::lwz, node, objClassReg,
+               new (cg->trHeapMemory()) TR::MemoryReference(objectReg,
+                     (int32_t) TR::Compiler->om.offsetOfObjectVftField(), 4, cg),
+               iCursor);
+      else
+         iCursor = generateTrg1MemInstruction(cg,TR::InstOpCode::Op_load, node, objClassReg,
+               new (cg->trHeapMemory()) TR::MemoryReference(objectReg, (int32_t) TR::Compiler->om.offsetOfObjectVftField(), TR::Compiler->om.sizeofReferenceAddress(), cg), iCursor);
       iCursor = TR::TreeEvaluator::generateVFTMaskInstruction(cg, node, objClassReg, iCursor);
       }
 
@@ -6927,15 +6881,14 @@ static void genInitObjectHeader(TR::Node *node, TR::Instruction *&iCursor, TR_Op
          iCursor = loadConstant(cg, node, (int32_t) clazz | (int32_t) orFlag, temp1Reg, iCursor);
 #endif /* TR_TARGET_64BIT */
          }
-#ifdef OMR_GC_COMPRESSED_POINTERS
-      // must store only 32 bits
-      iCursor = generateMemSrc1Instruction(cg, TR::InstOpCode::stw, node,
-            new (cg->trHeapMemory()) TR::MemoryReference(resReg, (int32_t)TR::Compiler->om.offsetOfObjectVftField(), 4, cg),
-            temp1Reg, iCursor);
-#else
-      iCursor = generateMemSrc1Instruction(cg,TR::InstOpCode::Op_st, node,
-            new (cg->trHeapMemory()) TR::MemoryReference(resReg, (int32_t) TR::Compiler->om.offsetOfObjectVftField(), TR::Compiler->om.sizeofReferenceAddress(), cg), temp1Reg, iCursor);
-#endif
+      if (TR::Compiler->om.compressObjectReferences())
+         // must store only 32 bits
+         iCursor = generateMemSrc1Instruction(cg, TR::InstOpCode::stw, node,
+              new (cg->trHeapMemory()) TR::MemoryReference(resReg, (int32_t)TR::Compiler->om.offsetOfObjectVftField(), 4, cg),
+               temp1Reg, iCursor);
+      else
+         iCursor = generateMemSrc1Instruction(cg,TR::InstOpCode::Op_st, node,
+               new (cg->trHeapMemory()) TR::MemoryReference(resReg, (int32_t) TR::Compiler->om.offsetOfObjectVftField(), TR::Compiler->om.sizeofReferenceAddress(), cg), temp1Reg, iCursor);
       }
    else
       {
@@ -6943,15 +6896,14 @@ static void genInitObjectHeader(TR::Node *node, TR::Instruction *&iCursor, TR_Op
          {
          iCursor = generateTrg1Src1ImmInstruction(cg, TR::InstOpCode::ori, node, clzReg, clzReg, orFlag, iCursor);
          }
-#ifdef OMR_GC_COMPRESSED_POINTERS
-      // must store only 32 bits
-      iCursor = generateMemSrc1Instruction(cg, TR::InstOpCode::stw, node,
-            new (cg->trHeapMemory()) TR::MemoryReference(resReg, (int32_t)TR::Compiler->om.offsetOfObjectVftField(), 4, cg),
-            clzReg, iCursor);
-#else
-      iCursor = generateMemSrc1Instruction(cg,TR::InstOpCode::Op_st, node,
-            new (cg->trHeapMemory()) TR::MemoryReference(resReg, (int32_t) TR::Compiler->om.offsetOfObjectVftField(), TR::Compiler->om.sizeofReferenceAddress(), cg), clzReg, iCursor);
-#endif
+      if (TR::Compiler->om.compressObjectReferences())
+         // must store only 32 bits
+         iCursor = generateMemSrc1Instruction(cg, TR::InstOpCode::stw, node,
+               new (cg->trHeapMemory()) TR::MemoryReference(resReg, (int32_t)TR::Compiler->om.offsetOfObjectVftField(), 4, cg),
+               clzReg, iCursor);
+      else
+         iCursor = generateMemSrc1Instruction(cg,TR::InstOpCode::Op_st, node,
+               new (cg->trHeapMemory()) TR::MemoryReference(resReg, (int32_t) TR::Compiler->om.offsetOfObjectVftField(), TR::Compiler->om.sizeofReferenceAddress(), cg), clzReg, iCursor);
       }
 
 
@@ -8022,14 +7974,12 @@ static bool simpleReadMonitor(TR::Node *node, TR::CodeGenerator *cg, TR::Node *o
    TR::InstOpCode::Mnemonic loadOpCode;
    if (nextTopNode->getOpCodeValue() == TR::aloadi && cg->comp()->target().is64Bit())
       {
-#ifdef OMR_GC_COMPRESSED_POINTERS
-      if (nextTopNode->getSymbol()->isClassObject())
+      if (TR::Compiler->om.compressObjectReferences() && nextTopNode->getSymbol()->isClassObject())
          {
          tempMR = new (cg->trHeapMemory()) TR::MemoryReference(nextTopNode, 4, cg);
          loadOpCode = TR::InstOpCode::lwz;
          }
       else
-#endif
          {
          tempMR = new (cg->trHeapMemory()) TR::MemoryReference(nextTopNode, 8, cg);
          loadOpCode = TR::InstOpCode::ld;
@@ -9664,13 +9614,12 @@ static TR::Register *inlineAtomicOps(TR::Node *node, TR::CodeGenerator *cg, int8
          scratchRegister = cg->allocateCollectedReferenceRegister();
          TR::Register *memRefRegister = scratchRegister;
 
-#ifdef OMR_GC_COMPRESSED_POINTERS
-         // read only 32 bits
-         generateTrg1MemInstruction(cg, TR::InstOpCode::lwz, node, memRefRegister,
-               new (cg->trHeapMemory()) TR::MemoryReference(valueReg, arrayFieldOffset, 4, cg));
-#else
-         generateTrg1MemInstruction(cg,TR::InstOpCode::Op_load, node, memRefRegister, new (cg->trHeapMemory()) TR::MemoryReference(valueReg, arrayFieldOffset, TR::Compiler->om.sizeofReferenceAddress(), cg));
-#endif
+         if (TR::Compiler->om.compressObjectReferences())
+            // read only 32 bits
+            generateTrg1MemInstruction(cg, TR::InstOpCode::lwz, node, memRefRegister,
+                  new (cg->trHeapMemory()) TR::MemoryReference(valueReg, arrayFieldOffset, 4, cg));
+         else
+            generateTrg1MemInstruction(cg,TR::InstOpCode::Op_load, node, memRefRegister, new (cg->trHeapMemory()) TR::MemoryReference(valueReg, arrayFieldOffset, TR::Compiler->om.sizeofReferenceAddress(), cg));
 
          valueReg = memRefRegister;
 
@@ -10214,13 +10163,13 @@ static TR::Register *inlineAtomicOperation(TR::Node *node, TR::CodeGenerator *cg
       TR::MemoryReference *tempMR = new (cg->trHeapMemory()) TR::MemoryReference(valueReg, arrayFieldOffset, size, cg);
       scratchReg = cg->allocateCollectedReferenceRegister();
 
-#ifdef OMR_GC_COMPRESSED_POINTERS
-      // read only 32 bits
-      generateTrg1MemInstruction(cg, TR::InstOpCode::lwz, node, scratchReg,
-            new (cg->trHeapMemory()) TR::MemoryReference(valueReg, arrayFieldOffset, 4, cg));
-#else
-      generateTrg1MemInstruction(cg,TR::InstOpCode::Op_load, node, scratchReg, new (cg->trHeapMemory()) TR::MemoryReference(valueReg, arrayFieldOffset, TR::Compiler->om.sizeofReferenceAddress(), cg));
-#endif
+      if (TR::Compiler->om.compressObjectReferences())
+         // read only 32 bits
+         generateTrg1MemInstruction(cg, TR::InstOpCode::lwz, node, scratchReg,
+               new (cg->trHeapMemory()) TR::MemoryReference(valueReg, arrayFieldOffset, 4, cg));
+      else
+         generateTrg1MemInstruction(cg,TR::InstOpCode::Op_load, node, scratchReg, new (cg->trHeapMemory()) TR::MemoryReference(valueReg, arrayFieldOffset, TR::Compiler->om.sizeofReferenceAddress(), cg));
+
       valueReg = scratchReg;
       fieldOffsetReg = cg->allocateRegister();
       numDeps += 2;
