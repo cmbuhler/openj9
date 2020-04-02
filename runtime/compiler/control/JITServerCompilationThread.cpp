@@ -26,14 +26,6 @@
 #include "control/CompilationRuntime.hpp"
 #include "control/MethodToBeCompiled.hpp"
 #include "control/JITServerHelpers.hpp"
-#ifdef CASSANDRA_LOGGER
-#include "control/CassandraLogger.hpp"
-#include <iostream>
-#endif // CASSANDRA_LOGGER
-#ifdef MONGO_LOGGER
-#include "control/MongoLogger.hpp"
-#include <iostream>
-#endif // MONGO_LOGGER
 #include "env/ClassTableCriticalSection.hpp"
 #include "env/VMAccessCriticalSection.hpp"
 #include "env/JITServerPersistentCHTable.hpp"
@@ -45,6 +37,12 @@
 #include "net/ServerStream.hpp"
 #include "jitprotos.h"
 #include "vmaccess.h"
+#ifdef CASSANDRA_LOGGER
+#include "control/CassandraLogger.hpp"
+#endif // CASSANDRA_LOGGER
+#ifdef MONGO_LOGGER
+#include "control/MongoLogger.hpp"
+#endif // MONGO_LOGGER
 
 
 /**
@@ -91,59 +89,56 @@ outOfProcessCompilationEnd(
 
    // Pack log file to send to client
    std::string logFileStr = TR::Options::packLogFile(comp->getOutFile());
-   std::cout << "Pre Persistent Logging Section" << std::endl;
-   std::cout << comp->getOption(TR_PersistentLogging) << std::endl;
-#ifdef PERSISTENT_LOGGING_SUPPORT
-   if (comp->getOption(TR_PersistentLogging))
+
+#if defined(MONGO_LOGGER) || defined(CASSANDRA_LOGGER)
+   printf("Persistent Logging enabled\n");
+   fflush(stdout);
+   if (compInfoPT->getCompilationInfo()->getPersistentInfo()->getJITServerPersistentLogging()
+         && comp->getOption(TR_PersistentLogging)) //Check both server and client enable persistent logging.
       {
       uint64_t clientUID = entry->getClientUID();
       const char* methodSignature = compInfoPT->getCompilation()->signature();
       TR::PersistentInfo* persistentInfo = compInfoPT->getCompilationInfo()->getPersistentInfo();
       printf("Persistent Logging enabled\n");
-      printf("Found Client ID %llu\n", clientUID);
-      printf("potential method full name: %s\n",methodSignature);
+//      printf("Found Client ID %llu\n", clientUID);
+//      printf("potential method full name: %s\n",methodSignature);
       uint32_t persistentLoggingDatabasePort = persistentInfo->getJITServerPersistentLoggingDatabasePort();
-      printf("what is the persistent logging database port ? %lu\n",persistentLoggingDatabasePort);
+//      printf("what is the persistent logging database port ? %lu\n",persistentLoggingDatabasePort);
       const char* persistentLoggingDatabaseAddress = persistentInfo->getJITServerPersistentLoggingDatabaseAddress();
-      std::cout << "what is the persistent logging database Address ? " <<  persistentLoggingDatabaseAddress << std::endl;
+//      std::cout << "what is the persistent logging database Address ? " <<  persistentLoggingDatabaseAddress << std::endl;
 
       const char* persistentLoggingDatabaseUsername = persistentInfo->getJITServerPersistentLoggingDatabaseUsername();
-      std::cout << "what is the persistent logging database Username ? " <<  persistentLoggingDatabaseUsername << std::endl;
+//      std::cout << "what is the persistent logging database Username ? " <<  persistentLoggingDatabaseUsername << std::endl;
 
       const char* persistentLoggingDatabasePassword = persistentInfo->getJITServerPersistentLoggingDatabasePassword();
-      std::cout <<"what is the persistent logging database Password ? "<< persistentLoggingDatabasePassword << std::endl;
+//      std::cout <<"what is the persistent logging database Password ? "<< persistentLoggingDatabasePassword << std::endl;
 
       const char* persistentLoggingDatabaseName = persistentInfo->getJITServerPersistentLoggingDatabaseName();
-      std::cout << "what is the persistent logging database Name ?  " << persistentLoggingDatabaseName << std::endl;
-#ifdef CASSANDRA_LOGGER
-      CassandraLogger logger(persistentLoggingDatabaseAddress,
-      persistentLoggingDatabasePort,
-      persistentLoggingDatabaseName,
-      persistentLoggingDatabaseUsername,
-      persistentLoggingDatabasePassword);
-      std::cout << "Im Cassandra" << std::endl;
-#endif // CASSANDRA_LOGGER
-
-#ifdef MONGO_LOGGER
+//      std::cout << "what is the persistent logging database Name ?  " << persistentLoggingDatabaseName << std::endl;
+#if defined(MONGO_LOGGER)
       MongoLogger logger(persistentLoggingDatabaseAddress,
-      persistentLoggingDatabasePort,
-      persistentLoggingDatabaseName,
-      persistentLoggingDatabaseUsername,
-      persistentLoggingDatabasePassword);
-      std::cout << "Im mongo" << std::endl;
-#endif // MONGO_LOGGER
+         persistentLoggingDatabasePort,
+         persistentLoggingDatabaseName,
+         persistentLoggingDatabaseUsername,
+         persistentLoggingDatabasePassword);
+#elif defined(CASSANDRA_LOGGER)
+      CassandraLogger logger(persistentLoggingDatabaseAddress,
+         persistentLoggingDatabasePort,
+         persistentLoggingDatabaseName,
+         persistentLoggingDatabaseUsername,
+         persistentLoggingDatabasePassword);
+#endif // MONGO_LOGGER elif CASSANDRA_LOGGER
       bool isConnected = logger.connect();
       if (isConnected)
          {
-         logger.logMethod(methodSignature, clientUID, logFileStr.c_str());
+         if (!logger.logMethod(methodSignature, clientUID, logFileStr.c_str()))
+            fprintf(stderr, "JITServer: Persistent Logging Error - Database insert failed, skipping persistent logging.");
          logger.disconnect();
          }
       else
-         {
-            printf("Persistent Logging Error: Database Connection Failed\n");
-         }
+         fprintf(stderr, "JITServer: Persistent Logging Error - Database connection failed.\n");
       }
-#endif // PERSISTENT_LOGGING_SUPPORT
+#endif // defined(MONGO_LOGGER) || defined(CASSANDRA_LOGGER)
 
    std::string svmSymbolToIdStr;
    if (comp->getOption(TR_UseSymbolValidationManager))

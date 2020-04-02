@@ -1074,25 +1074,25 @@ static void JITServerParseCommonOptions(J9JavaVM *vm, TR::CompilationInfo *compI
    const char *xxJITServerSSLKeyOption = "-XX:JITServerSSLKey=";
    const char *xxJITServerSSLCertOption = "-XX:JITServerSSLCert=";
    const char *xxJITServerSSLRootCertsOption = "-XX:JITServerSSLRootCerts=";
-   #ifdef PERSISTENT_LOGGING_SUPPORT
-      const char *xxJITServerPersistentLoggingDatabasePortOption = "-XX:JITServerPersistentLoggingDatabasePort=";
-      const char *xxJITServerPersistentLoggingDatabaseAddressOption = "-XX:JITServerPersistentLoggingDatabaseAddress=";
-      const char *xxJITServerPersistentLoggingDatabaseNameOption = "-XX:JITServerPersistentLoggingDatabaseName=";
-      const char *xxJITServerPersistentLoggingDatabaseUsernameOption = "-XX:JITServerPersistentLoggingDatabaseUsername=";
-      const char *xxJITServerPersistentLoggingDatabasePasswordOption = "-XX:JITServerPersistentLoggingDatabasePassword=";
-   #endif // PERSISTENT_LOGGING_SUPPORT
    int32_t xxJITServerPortArgIndex = FIND_ARG_IN_VMARGS(STARTSWITH_MATCH, xxJITServerPortOption, 0);
    int32_t xxJITServerTimeoutArgIndex = FIND_ARG_IN_VMARGS(STARTSWITH_MATCH, xxJITServerTimeoutOption, 0);
    int32_t xxJITServerSSLKeyArgIndex = FIND_ARG_IN_VMARGS(STARTSWITH_MATCH, xxJITServerSSLKeyOption, 0);
    int32_t xxJITServerSSLCertArgIndex = FIND_ARG_IN_VMARGS(STARTSWITH_MATCH, xxJITServerSSLCertOption, 0);
    int32_t xxJITServerSSLRootCertsArgIndex = FIND_ARG_IN_VMARGS(STARTSWITH_MATCH, xxJITServerSSLRootCertsOption, 0);
-   #ifdef PERSISTENT_LOGGING_SUPPORT
-      int32_t xxJITServerPersistentLoggingDatabasePortArgIndex = FIND_ARG_IN_VMARGS(STARTSWITH_MATCH, xxJITServerPersistentLoggingDatabasePortOption, 0);
-      int32_t xxJITServerPersistentLoggingDatabaseAddressArgIndex = FIND_ARG_IN_VMARGS(STARTSWITH_MATCH, xxJITServerPersistentLoggingDatabaseAddressOption, 0);
-      int32_t xxJITServerPersistentLoggingDatabaseNameArgIndex = FIND_ARG_IN_VMARGS(STARTSWITH_MATCH, xxJITServerPersistentLoggingDatabaseNameOption, 0);
-      int32_t xxJITServerPersistentLoggingDatabaseUsernameArgIndex = FIND_ARG_IN_VMARGS(STARTSWITH_MATCH, xxJITServerPersistentLoggingDatabaseUsernameOption, 0);
-      int32_t xxJITServerPersistentLoggingDatabasePasswordArgIndex = FIND_ARG_IN_VMARGS(STARTSWITH_MATCH, xxJITServerPersistentLoggingDatabasePasswordOption, 0);
-   #endif // PERSISTENT_LOGGING_SUPPORT
+#if defined(MONGO_LOGGER) || defined(CASSANDRA_LOGGER)
+   const char *xxJITServerPersistentLoggingOption = "-XX:JITServerPersistentLogging=";
+   const char *xxJITServerPersistentLoggingDatabasePortOption = "-XX:JITServerPersistentLoggingDatabasePort=";
+   const char *xxJITServerPersistentLoggingDatabaseAddressOption = "-XX:JITServerPersistentLoggingDatabaseAddress=";
+   const char *xxJITServerPersistentLoggingDatabaseNameOption = "-XX:JITServerPersistentLoggingDatabaseName=";
+   const char *xxJITServerPersistentLoggingDatabaseUsernameOption = "-XX:JITServerPersistentLoggingDatabaseUsername=";
+   const char *xxJITServerPersistentLoggingDatabasePasswordOption = "-XX:JITServerPersistentLoggingDatabasePassword=";
+   int32_t xxJITServerPersistentLoggingArgIndex = FIND_ARG_IN_VMARGS(STARTSWITH_MATCH, xxJITServerPersistentLoggingOption, 0);
+   int32_t xxJITServerPersistentLoggingDatabasePortArgIndex = FIND_ARG_IN_VMARGS(STARTSWITH_MATCH, xxJITServerPersistentLoggingDatabasePortOption, 0);
+   int32_t xxJITServerPersistentLoggingDatabaseAddressArgIndex = FIND_ARG_IN_VMARGS(STARTSWITH_MATCH, xxJITServerPersistentLoggingDatabaseAddressOption, 0);
+   int32_t xxJITServerPersistentLoggingDatabaseNameArgIndex = FIND_ARG_IN_VMARGS(STARTSWITH_MATCH, xxJITServerPersistentLoggingDatabaseNameOption, 0);
+   int32_t xxJITServerPersistentLoggingDatabaseUsernameArgIndex = FIND_ARG_IN_VMARGS(STARTSWITH_MATCH, xxJITServerPersistentLoggingDatabaseUsernameOption, 0);
+   int32_t xxJITServerPersistentLoggingDatabasePasswordArgIndex = FIND_ARG_IN_VMARGS(STARTSWITH_MATCH, xxJITServerPersistentLoggingDatabasePasswordOption, 0);
+#endif // defined(MONGO_LOGGER) || ...
    
    if (xxJITServerPortArgIndex >= 0)
       {
@@ -1101,41 +1101,50 @@ static void JITServerParseCommonOptions(J9JavaVM *vm, TR::CompilationInfo *compI
       if (ret == OPTION_OK)
          compInfo->getPersistentInfo()->setJITServerPort(port);
       }
-   #ifdef PERSISTENT_LOGGING_SUPPORT
-      if (xxJITServerPersistentLoggingDatabasePortArgIndex >= 0)
-         {
-         uint32_t port=0;
-         IDATA ret = GET_INTEGER_VALUE(xxJITServerPersistentLoggingDatabasePortArgIndex, xxJITServerPersistentLoggingDatabasePortOption, port);
-         if (ret == OPTION_OK)
-            compInfo->getPersistentInfo()->setJITServerPersistentLoggingDatabasePort(port);
-         }
-      if (xxJITServerPersistentLoggingDatabaseUsernameArgIndex >= 0)
-         {
-         char *username = NULL;
-         GET_OPTION_VALUE(xxJITServerPersistentLoggingDatabaseUsernameArgIndex, '=', &username);
-         compInfo->getPersistentInfo()->setJITServerPersistentLoggingDatabaseUsername(username);
-         }
-      if (xxJITServerPersistentLoggingDatabaseNameArgIndex >= 0)
-         {
-         char *name = NULL;
-         GET_OPTION_VALUE(xxJITServerPersistentLoggingDatabaseNameArgIndex, '=', &name);
-         compInfo->getPersistentInfo()->setJITServerPersistentLoggingDatabaseName(name);
-         }
 
-      if (xxJITServerPersistentLoggingDatabasePasswordArgIndex >= 0)
-         {
-         char *password = NULL;
-         GET_OPTION_VALUE(xxJITServerPersistentLoggingDatabasePasswordArgIndex, '=', &password);
-         compInfo->getPersistentInfo()->setJITServerPersistentLoggingDatabasePassword(password);
-         }
-      
-      if (xxJITServerPersistentLoggingDatabaseAddressArgIndex >= 0)
-         {
-         char *address = NULL;
-         GET_OPTION_VALUE(xxJITServerPersistentLoggingDatabaseAddressArgIndex, '=', &address);
-         compInfo->getPersistentInfo()->setJITServerPersistentLoggingDatabaseAddress(address);
-         }
-   #endif // PERSISTENT_LOGGING_SUPPORT
+#if defined(MONGO_LOGGER) || defined(CASSANDRA_LOGGER)
+   if (xxJITServerPersistentLoggingArgIndex >= 0)
+      {
+      bool enable = false;
+      IDATA ret = GET_INTEGER_VALUE(xxJITServerPersistentLoggingArgIndex, xxJITServerPersistentLoggingOption, enable);
+      if (ret == OPTION_OK)
+         compInfo->getPersistentInfo()->setJITServerPersistentLogging(enable);
+      }
+   if (xxJITServerPersistentLoggingDatabasePortArgIndex >= 0)
+      {
+      uint32_t port=0;
+      IDATA ret = GET_INTEGER_VALUE(xxJITServerPersistentLoggingDatabasePortArgIndex, xxJITServerPersistentLoggingDatabasePortOption, port);
+      if (ret == OPTION_OK)
+         compInfo->getPersistentInfo()->setJITServerPersistentLoggingDatabasePort(port);
+      }
+   if (xxJITServerPersistentLoggingDatabaseUsernameArgIndex >= 0)
+      {
+      char *username = NULL;
+      GET_OPTION_VALUE(xxJITServerPersistentLoggingDatabaseUsernameArgIndex, '=', &username);
+      compInfo->getPersistentInfo()->setJITServerPersistentLoggingDatabaseUsername(username);
+      }
+   if (xxJITServerPersistentLoggingDatabaseNameArgIndex >= 0)
+      {
+      char *name = NULL;
+      GET_OPTION_VALUE(xxJITServerPersistentLoggingDatabaseNameArgIndex, '=', &name);
+      compInfo->getPersistentInfo()->setJITServerPersistentLoggingDatabaseName(name);
+      }
+
+   if (xxJITServerPersistentLoggingDatabasePasswordArgIndex >= 0)
+      {
+      char *password = NULL;
+      GET_OPTION_VALUE(xxJITServerPersistentLoggingDatabasePasswordArgIndex, '=', &password);
+      compInfo->getPersistentInfo()->setJITServerPersistentLoggingDatabasePassword(password);
+      }
+
+   if (xxJITServerPersistentLoggingDatabaseAddressArgIndex >= 0)
+      {
+      char *address = NULL;
+      GET_OPTION_VALUE(xxJITServerPersistentLoggingDatabaseAddressArgIndex, '=', &address);
+      compInfo->getPersistentInfo()->setJITServerPersistentLoggingDatabaseAddress(address);
+      }
+#endif // defined(MONGO_LOGGER) || ...
+
    if (xxJITServerTimeoutArgIndex >= 0)
       {
       uint32_t timeoutMs=0;

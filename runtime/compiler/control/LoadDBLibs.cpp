@@ -7,6 +7,7 @@
 #include <cassandra.h>
 #include <stdio.h>
 
+#if defined(MONGO_LOGGER)
 /*
  * MONGOC and BSON Library functions and strcuts
  */
@@ -27,7 +28,9 @@ Omongoc_collection_destroy_t *Omongoc_collection_destroy = NULL;
 Omongoc_database_destroy_t *Omongoc_database_destroy = NULL;
 Omongoc_uri_destroy_t *Omongoc_uri_destroy = NULL;
 Omongoc_client_destroy_t *Omongoc_client_destroy = NULL;
+#endif // defined(MONGO_LOGGER)
 
+#if defined(CASSANDRA_LOGGER)
 /*
  * CASSANDRA functions and structs
  */
@@ -52,10 +55,11 @@ Ocass_time_from_epoch_t *Ocass_time_from_epoch = NULL;
 Ocass_date_from_epoch_t *Ocass_date_from_epoch = NULL;
 Ocass_statement_bind_int64_t *Ocass_statement_bind_int64 = NULL;
 Ocass_statement_bind_uint32_t *Ocass_statement_bind_uint32 = NULL;
-
+#endif // defined(CASSANDRA_LOGGER)
 
 namespace JITServer
    {
+#if defined(MONGO_LOGGER)
       void *loadLibmongoc()
          {
          void *result = NULL;
@@ -69,13 +73,15 @@ namespace JITServer
          result = dlopen("libbson-1.0.so", RTLD_NOW);
          return result;
          }
-
+#endif // defined(MONGO_LOGGER)
+#if defined(CASSANDRA_LOGGER)
       void *loadLibcassandra()
          {
          void *result = NULL;
          result = dlopen("libcassandra.so", RTLD_NOW);
          return result;
          }
+#endif //defined(CASSANDRA_LOGGER)
 
       void unloadDBLib(void *handle)
          {
@@ -87,6 +93,7 @@ namespace JITServer
          return dlsym(handle, sym);
          }
 
+#if defined(MONGO_LOGGER)
       bool loadLibmongocAndSymbols()
          {
          void *handle = NULL;
@@ -171,7 +178,9 @@ namespace JITServer
 
          return true;
          }
+#endif // defined(MONGO_LOGGER)
 
+#if defined(CASSANDRA_LOGGER)
       bool loadLibcassandraAndSymbols()
          {
          void *handle = NULL;
@@ -235,4 +244,5 @@ namespace JITServer
             }
          return true;
          }
+#endif // defined(CASSANDRA_LOGGER);
    }

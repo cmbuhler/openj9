@@ -8,6 +8,7 @@
 #include <stdint.h>
 #include <stdlib.h>
 
+#if defined(MONGO_LOGGER)
 /*
  * libbson function pointers and typedefs
  */
@@ -87,7 +88,9 @@ typedef void Omongoc_database_destroy_t(Omongoc_database_t *database);
 typedef void Omongoc_uri_destroy_t(Omongoc_uri_t *uri);
 
 typedef void Omongoc_client_destroy_t(Omongoc_client_t *client);
+#endif // defined(MONGO_LOGGER)
 
+#if defined(CASSANDRA_LOGGER)
 /*
  * libcassandra function pointers and typedefs
  */
@@ -148,10 +151,12 @@ typedef Ocass_uint32_t Ocass_date_from_epoch_t(Ocass_int64_t epoch_secs);
 typedef int Ocass_statement_bind_uint32_t(OCassStatement *statement, size_t index, Ocass_uint32_t value);
 
 typedef int Ocass_statement_bind_int64_t(OCassStatement *statement, size_t index, Ocass_int64_t value);
+#endif // defined(CASSANDRA_LOGGER)
 
 /*
  * Function pointer definitions.
  */
+#if defined(MONGO_LOGGER)
 // mongoc and bson:
 extern "C" Obson_new_t *Obson_new;
 extern "C" Obson_append_utf8_t *Obson_append_utf8;
@@ -170,7 +175,8 @@ extern "C" Omongoc_collection_destroy_t *Omongoc_collection_destroy;
 extern "C" Omongoc_database_destroy_t *Omongoc_database_destroy;
 extern "C" Omongoc_uri_destroy_t *Omongoc_uri_destroy;
 extern "C" Omongoc_client_destroy_t *Omongoc_client_destroy;
-
+#endif // defined(MONGO_LOGGER)
+#if defined(CASSANDRA_LOGGER)
 // Cassandra:
 extern "C" Ocass_statement_new_t *Ocass_statement_new;
 extern "C" Ocass_statement_free_t *Ocass_statement_free;
@@ -193,25 +199,35 @@ extern "C" Ocass_time_from_epoch_t *Ocass_time_from_epoch;
 extern "C" Ocass_date_from_epoch_t *Ocass_date_from_epoch;
 extern "C" Ocass_statement_bind_int64_t *Ocass_statement_bind_int64;
 extern "C" Ocass_statement_bind_uint32_t *Ocass_statement_bind_uint32;
-
+#endif // defined(CASSANDRA_LOGGER)
 namespace JITServer
    {
+#if defined(MONGO_LOGGER)
       static bool is_mongoc_init = 0;
+
+      inline bool isMongoCInit() { return is_mongoc_init; }
+
+      inline void initMongoC() { Omongoc_init(); is_mongoc_init = 1; }
+
+      inline void cleanupMongoC() { Omongoc_cleanup(); is_mongoc_init = 0; }
 
       void *loadLibmongoc();
 
       void *loadLibbson();
-
+#endif // defined(MONGO_LOGGER)
+#if defined(CASSANDRA_LOGGER)
       void *loadLibcassandra();
-
+#endif //defined(CASSANDRA_LOGGER)
       void unloadDBLib(void *handle);
 
       void *findDBLibSymbol(void *handle, const char *sym);
-
+#if defined(MONGO_LOGGER)
       bool loadLibmongocAndSymbols();
 
       bool loadLibbsonAndSymbols();
-
+#endif // defined(MONGO_LOGGER);
+#if defined(CASSANDRA_LOGGER)
       bool loadLibcassandraAndSymbols();
+#endif // defined(CASSANDRA_LOGGER)
    }
 #endif //JITSERVER_LOADDBLIBS_HPP

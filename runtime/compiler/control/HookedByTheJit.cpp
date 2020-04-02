@@ -82,10 +82,10 @@
 #include "runtime/JITServerIProfiler.hpp"
 #include "runtime/JITServerStatisticsThread.hpp"
 #include "runtime/Listener.hpp"
-#if defined(MONGO_LOGGER)
-#include "control/LoadDBLibs.hpp"
-#endif // defined(MONGO_LOGGER)
-#endif
+//#if defined(MONGO_LOGGER)
+//#include "control/LoadDBLibs.hpp"
+//#endif // defined(MONGO_LOGGER)
+#endif // defined(J9VM_OPT_JITSERVER)
 
 extern "C" {
 struct J9JavaVM;
@@ -4749,9 +4749,9 @@ void JitShutdown(J9JITConfig * jitConfig)
       {
       statsThreadObj->stopStatisticsThread(jitConfig);
       }
-#if defined(MONGO_LOGGER)
-   Omongoc_cleanup();
-#endif // defined(MONGOLOGGER)
+//#if defined(MONGO_LOGGER)
+//   JITServer::cleanupMongoC();
+//#endif // defined(MONGO_LOGGER)
 #endif
 
    TR_DebuggingCounters::report();

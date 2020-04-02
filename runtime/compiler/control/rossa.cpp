@@ -109,9 +109,9 @@
 #include "net/CommunicationStream.hpp"
 #include "net/ClientStream.hpp"
 #include "net/LoadSSLLibs.hpp"
-#if defined(PERSISTENT_LOGGING_SUPPORT)
+#if defined(MONGO_LOGGER) || defined(CASSANDRA_LOGGER)
 #include "control/LoadDBLibs.hpp"
-#endif //defined(PERSISTENT_LOGGING_SUPPORT)
+#endif //defined(MONGO_LOGGER) || defined(CASSANDRA_LOGGER)
 #include "runtime/JITClientSession.hpp"
 #include "runtime/Listener.hpp"
 #include "runtime/JITServerStatisticsThread.hpp"
@@ -1655,25 +1655,6 @@ onLoadInternal(
       if (!JITServer::loadLibsslAndFindSymbols())
          return -1;
       }
-#if defined(PERSISTENT_LOGGING_SUPPORT)
-//    TODO: Get Flag from CLIENT command line.
-//   if(TR::Options::getCmdLineOptions()->getOption(TR_PersistentLogging))
-//       {
-#if defined(MONGO_LOGGER)
-      if(!JITServer::loadLibmongocAndSymbols() || !JITServer::loadLibbsonAndSymbols() )
-         return -1;
-      if(!JITServer::is_mongoc_init)
-         {
-         Omongoc_init();
-         JITServer::is_mongoc_init = 1;
-         }
-#endif //defined(MONGO_LOGGER)
-#if defined(CASSANDRA_LOGGER)
-      if(!JITServer::loadLibcassandraAndSymbols())
-         return -1;
-#endif //defined(CASSANDRA_LOGGER)
-//       }
-#endif //defined(PERSISTENT_LOGGING_SUPPORT)
 
    if (compInfo->getPersistentInfo()->getRemoteCompilationMode() == JITServer::SERVER)
       {
@@ -1703,6 +1684,26 @@ onLoadInternal(
          {
          ((TR_JitPrivateConfig*)(jitConfig->privateConfig))->statisticsThreadObject = NULL;
          }
+
+#if defined(MONGO_LOGGER) || defined(CASSANDRA_LOGGER)
+//    TODO: Get Flag from command line.
+      if(compInfo->getPersistentInfo()->getJITServerPersistentLogging())
+         {
+#if defined(MONGO_LOGGER)
+         fprintf(stderr, "Result of the thing: %d", compInfo->getPersistentInfo()->getJITServerPersistentLogging());
+         fflush(stderr);
+         if(!JITServer::loadLibmongocAndSymbols() || !JITServer::loadLibbsonAndSymbols() )
+            return -1;
+         if(!JITServer::isMongoCInit())
+            {
+            JITServer::initMongoC();
+            }
+#elif defined(CASSANDRA_LOGGER)
+         if(!JITServer::loadLibcassandraAndSymbols())
+            return -1;
+#endif //defined(CASSANDRA_LOGGER)
+         }
+#endif //defined(MONGO_LOGGER) || defined(CASSANDRA_LOGGER)
       }
    else if (compInfo->getPersistentInfo()->getRemoteCompilationMode() == JITServer::CLIENT)
       {

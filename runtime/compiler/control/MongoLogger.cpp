@@ -150,7 +150,7 @@ bool MongoLogger::logMethod(const char* method, uint64_t clientID, const char* l
    if (!Omongoc_collection_insert_one(_collection, insert, NULL, NULL, &error))
       {
       fprintf(stderr, "JITServer: Mongo Logger failed to insert log.\n"
-                     "error message: %s\n", error.message);
+                      "error message: %s\n", error.message);
       }
 
    Obson_destroy(insert);
