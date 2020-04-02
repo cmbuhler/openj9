@@ -7006,7 +7006,7 @@ TR_J9VM::getClassFromSignature(const char * sig, int32_t sigLength, J9ConstantPo
    // For a non-array class type, strip off the first 'L' and last ';' of the
    // signature
    //
-   if (* sig == 'L' && sigLength > 2)
+   if ((*sig == 'L' || *sig == 'Q') && sigLength > 2)
       {
       sig += 1;
       sigLength -= 2;
@@ -8351,6 +8351,28 @@ TR_J9VM::getROMMethodFromRAMMethod(J9Method *ramMethod)
    return J9_ROM_METHOD_FROM_RAM_METHOD(ramMethod);
    }
 
+bool 
+TR_J9VM::noMultipleConcreteClasses(List<TR_PersistentClassInfo>* subClasses)
+   {
+   TR::Compilation *comp = _compInfoPT->getCompilation();
+   int count = 0;
+   ListIterator<TR_PersistentClassInfo> i(subClasses);
+   for (TR_PersistentClassInfo *ptClassInfo = i.getFirst(); ptClassInfo; ptClassInfo = i.getNext())
+      {
+      TR_OpaqueClassBlock *clazz = ptClassInfo->getClassId();
+      if (!TR::Compiler->cls.isInterfaceClass(comp, clazz) && !TR::Compiler->cls.isAbstractClass(comp, clazz))
+         {
+         count++;
+         }
+      if (count > 1)
+         {
+         return false;
+         }
+      }
+
+   return true;
+   }
+
 //////////////////////////////////////////////////////////
 // TR_J9SharedCacheVM
 //////////////////////////////////////////////////////////
@@ -8858,7 +8880,7 @@ TR_J9SharedCacheVM::isPrimitiveClass(TR_OpaqueClassBlock * classPointer)
    TR_ASSERT(comp, "Should be called only within a compilation");
 
    bool validated = false;
-   bool isPrimClass = TR_J9VMBase::isPrimitiveClass(classPointer);;
+   bool isPrimClass = TR_J9VMBase::isPrimitiveClass(classPointer);
 
    if (comp->getOption(TR_UseSymbolValidationManager))
       {

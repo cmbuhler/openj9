@@ -132,11 +132,11 @@ restoreBlockingEnterObject(J9VMThread *currentThread, bool collapseFrame)
  *
  * @return the object
  */
-IDATA
+UDATA
 objectMonitorEnterBlocking(J9VMThread *currentThread)
 {
 	Trc_VM_objectMonitorEnterBlocking_Entry(currentThread);
-	IDATA result = 0;
+	UDATA result = 0;
 	j9object_t object = J9VMTHREAD_BLOCKINGENTEROBJECT(currentThread, currentThread);
 	J9Class *ramClass = J9OBJECT_CLAZZ(currentThread, object);
 	/* Throughout this function, note that inlineGetLockAddress cannot run into out of memory case because
@@ -304,16 +304,23 @@ success:
  * 	1 if blocking is necessary
  * 	0 if out of memory
  */
-IDATA
+UDATA
 objectMonitorEnterNonBlocking(J9VMThread *currentThread, j9object_t object)
 {
-	IDATA result = (IDATA)(UDATA)object;
+	UDATA result = (UDATA)object;
 	j9objectmonitor_t volatile *lwEA = VM_ObjectMonitor::inlineGetLockAddress(currentThread, object);
-	
+
+#if defined(J9VM_OPT_VALHALLA_VALUE_TYPES)
+	J9Class * objClass = J9OBJECT_CLAZZ(currentThread, object);
+	if (J9_IS_J9CLASS_VALUETYPE(objClass)) {
+		result = J9_OBJECT_MONITOR_VALUE_TYPE_IMSE;
+		goto done;
+	}
+#endif /* J9VM_OPT_VALHALLA_VALUE_TYPES */	
 restart:
 	if (NULL == lwEA) {
 		/* out of memory */
-		result = 0;
+		result = J9_OBJECT_MONITOR_OOM;
 		goto done;
 	} else {
 		/* check for a recursive flat lock */
@@ -427,7 +434,7 @@ restart:
 						objectMonitor = objectMonitorInflate(currentThread, object, lock);
 						if (NULL == objectMonitor) {
 							/* out of memory */
-							result = 0;
+							result = J9_OBJECT_MONITOR_OOM;
 							goto done;
 						}
 					} else {
@@ -442,7 +449,7 @@ restart:
 						 */
 						if (NULL == monitorTableAt(currentThread, object)) {
 							/* out of memory */
-							result = 0;
+							result = J9_OBJECT_MONITOR_OOM;
 							goto done;
 						}
 						goto wouldBlock;
@@ -461,7 +468,7 @@ restart:
 wouldBlock:
 	/* unable to get thin lock by spinning - follow blocking path */
 	J9VMTHREAD_SET_BLOCKINGENTEROBJECT(currentThread, currentThread, object);
-	result = 1;
+	result = J9_OBJECT_MONITOR_BLOCKING;
 done:
 	return result;
 }

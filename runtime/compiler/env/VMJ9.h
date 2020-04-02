@@ -52,7 +52,6 @@ namespace TR { class CompilationInfoPerThread; }
 class TR_IProfiler;
 class TR_HWProfiler;
 class TR_JProfilerThread;
-class TR_LMGuardedStorage;
 class TR_Debug;
 class TR_OptimizationPlan;
 class TR_ExternalValueProfileInfo;
@@ -61,6 +60,7 @@ class TR_ExternalProfiler;
 class TR_JitPrivateConfig;
 class TR_DataCacheManager;
 class TR_EstimateCodeSize;
+class TR_PersistentClassInfo;
 #if defined(J9VM_OPT_JITSERVER)
 class TR_Listener;
 class JITServerStatisticsThread;
@@ -145,7 +145,6 @@ typedef struct TR_JitPrivateConfig
    TR_Listener   *listener;
    JITServerStatisticsThread   *statisticsThreadObject;
 #endif /* defined(J9VM_OPT_JITSERVER) */
-   TR_LMGuardedStorage *lmGuardedStorage;
    TR::CodeCacheManager *codeCacheManager; // reachable from JitPrivateConfig for kca's benefit
    TR_DataCacheManager *dcManager;  // reachable from JitPrivateConfig for kca's benefit
    bool          annotationClassesAlreadyLoaded;
@@ -1127,6 +1126,8 @@ public:
    virtual J9ROMMethod *getROMMethodFromRAMMethod(J9Method *ramMethod);
 
    TR_OpaqueClassBlock * getClassFromSignature(const char * sig, int32_t sigLength, J9ConstantPool * constantPool);
+
+   virtual bool noMultipleConcreteClasses(List<TR_PersistentClassInfo>* subClasses);
 
 private:
    void transformJavaLangClassIsArrayOrIsPrimitive( TR::Compilation *, TR::Node * callNode,  TR::TreeTop * treeTop, int32_t andMask);

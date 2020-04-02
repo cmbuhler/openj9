@@ -280,6 +280,7 @@ class ClientSessionData
    struct J9MethodInfo
       {
       J9ROMMethod *_romMethod; // pointer to local/server cache
+      J9ROMMethod *_origROMMethod; // pointer to the client-side method
       // The following is a hashtable that maps a bcIndex to IProfiler data
       // The hashtable is created on demand (NULL means it is missing)
       IPTable_t *_IPData;
@@ -329,6 +330,7 @@ class ClientSessionData
       TR_OpaqueClassBlock *_srMethodAccessorClass;
       TR_OpaqueClassBlock *_srConstructorAccessorClass;
 #endif // J9VM_OPT_SIDECAR
+      U_32 _extendedRuntimeFlags2;
       }; // struct VMInfo
 
    TR_PERSISTENT_ALLOC(TR_Memory::ClientSessionData)

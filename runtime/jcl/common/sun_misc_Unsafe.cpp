@@ -409,7 +409,7 @@ Java_sun_misc_Unsafe_monitorEnter(JNIEnv *env, jobject receiver, jobject obj)
 	if (NULL == obj) {
 		vmFuncs->setCurrentExceptionUTF(currentThread, J9VMCONSTANTPOOL_JAVALANGNULLPOINTEREXCEPTION, NULL);
 	} else {
-		IDATA monresult = vmFuncs->objectMonitorEnter(currentThread, J9_JNI_UNWRAP_REFERENCE(obj));
+		UDATA monresult = vmFuncs->objectMonitorEnter(currentThread, J9_JNI_UNWRAP_REFERENCE(obj));
 		if (0 == monresult) {
 oom:
 			vmFuncs->setNativeOutOfMemoryError(currentThread, 0, 0);
@@ -457,7 +457,7 @@ Java_sun_misc_Unsafe_tryMonitorEnter(JNIEnv *env, jobject receiver, jobject obj)
 	} else {
 		j9object_t object = J9_JNI_UNWRAP_REFERENCE(obj);
 		if (!VM_ObjectMonitor::inlineFastObjectMonitorEnter(currentThread, object)) {
-			if (vmFuncs->objectMonitorEnterNonBlocking(currentThread, object) <= 1) {
+			if (vmFuncs->objectMonitorEnterNonBlocking(currentThread, object) <= J9_OBJECT_MONITOR_BLOCKING) {
 				entered = JNI_FALSE;
 			}
 		}
