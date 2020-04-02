@@ -61,18 +61,18 @@ char * MongoLogger::constructURI()
       {
       if (strcmp(_databasePassword,"") != 0)
          {
-         sprintf(_uri_string, "mongodb://%s:%s@%s:%u/?authSource=%s", _databaseUsername, _databasePassword,
+         snprintf(_uri_string, 256, "mongodb://%s:%s@%s:%u/?authSource=%s", _databaseUsername, _databasePassword,
                _databaseIP, _databasePort, _databaseName);
          }
       else
          {
-         sprintf(_uri_string, "mongodb://%s@%s:%u/?authSource=%s", _databaseUsername, _databaseIP, _databasePort,
+         snprintf(_uri_string, 256, "mongodb://%s@%s:%u/?authSource=%s", _databaseUsername, _databaseIP, _databasePort,
                _databaseName);
          }
       }
    else
       {
-      sprintf(_uri_string, "mongodb://%s:%u/?authSource=%s", _databaseIP, _databasePort, _databaseName);
+      snprintf(_uri_string, 256, "mongodb://%s:%u/?authSource=%s", _databaseIP, _databasePort, _databaseName);
       }
 
    return _uri_string;
@@ -130,6 +130,8 @@ bool MongoLogger::logMethod(const char* method, uint64_t clientID, const char* l
    struct timespec t;
    clock_gettime(CLOCK_REALTIME, &t);
    int64_t timestamp = t.tv_sec * INT64_C(1000) + t.tv_nsec / 1000000;
+   char clientIDstr[20];
+   snprintf(clientIDstr, 20, "%llu", clientID);
    /*
    * The following constructs and inserts the following JSON structure:
    * {
@@ -142,8 +144,7 @@ bool MongoLogger::logMethod(const char* method, uint64_t clientID, const char* l
    Obson_t *insert = Obson_new();
    Obson_error_t error;
    Obson_append_utf8(insert, "method", -1, method, -1);
-   Obson_append_utf8(insert, "client_id", -1, std::to_string(clientID).c_str(), -1);
-//TODO: CONVER CLIENTID to CHAR * without using STRING.
+   Obson_append_utf8(insert, "client_id", -1, clientIDstr, -1);
    Obson_append_utf8(insert, "log", -1, logContent, -1);
    Obson_append_date_time(insert, "timestamp", -1, timestamp);
 

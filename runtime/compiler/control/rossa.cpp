@@ -1690,8 +1690,6 @@ onLoadInternal(
       if(compInfo->getPersistentInfo()->getJITServerPersistentLogging())
          {
 #if defined(MONGO_LOGGER)
-         fprintf(stderr, "Result of the thing: %d", compInfo->getPersistentInfo()->getJITServerPersistentLogging());
-         fflush(stderr);
          if(!JITServer::loadLibmongocAndSymbols() || !JITServer::loadLibbsonAndSymbols() )
             return -1;
          if(!JITServer::isMongoCInit())
