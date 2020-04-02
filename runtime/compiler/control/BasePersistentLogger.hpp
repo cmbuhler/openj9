@@ -15,7 +15,7 @@ class BasePersistentLogger
       virtual bool connect() = 0;
       virtual void disconnect() = 0;
       
-      BasePersistentLogger( const char * databaseIP, uint32_t databasePort, const char * databaseName)
+      BasePersistentLogger(const char * databaseIP, uint32_t databasePort, const char * databaseName)
          {
          _databaseIP = databaseIP;
          _databasePort = databasePort;

@@ -91,8 +91,6 @@ outOfProcessCompilationEnd(
 
    // Pack log file to send to client
    std::string logFileStr = TR::Options::packLogFile(comp->getOutFile());
-   std::cout << "Pre Persistent Logging Section" << std::endl;
-   std::cout << comp->getOption(TR_PersistentLogging) << std::endl;
 #ifdef PERSISTENT_LOGGING_SUPPORT
    if (comp->getOption(TR_PersistentLogging))
       {
@@ -140,7 +138,7 @@ outOfProcessCompilationEnd(
          }
       else
          {
-            printf("Persistent Logging Error: Database Connection Failed\n");
+         printf("Persistent Logging Error: Database Connection Failed\n");
          }
       }
 #endif // PERSISTENT_LOGGING_SUPPORT

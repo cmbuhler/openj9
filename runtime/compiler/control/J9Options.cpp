@@ -1074,19 +1074,17 @@ static void JITServerParseCommonOptions(J9JavaVM *vm, TR::CompilationInfo *compI
    const char *xxJITServerSSLKeyOption = "-XX:JITServerSSLKey=";
    const char *xxJITServerSSLCertOption = "-XX:JITServerSSLCert=";
    const char *xxJITServerSSLRootCertsOption = "-XX:JITServerSSLRootCerts=";
-   #ifdef PERSISTENT_LOGGING_SUPPORT
-      const char *xxJITServerPersistentLoggingDatabasePortOption = "-XX:JITServerPersistentLoggingDatabasePort=";
-      const char *xxJITServerPersistentLoggingDatabaseAddressOption = "-XX:JITServerPersistentLoggingDatabaseAddress=";
-      const char *xxJITServerPersistentLoggingDatabaseNameOption = "-XX:JITServerPersistentLoggingDatabaseName=";
-      const char *xxJITServerPersistentLoggingDatabaseUsernameOption = "-XX:JITServerPersistentLoggingDatabaseUsername=";
-      const char *xxJITServerPersistentLoggingDatabasePasswordOption = "-XX:JITServerPersistentLoggingDatabasePassword=";
-   #endif // PERSISTENT_LOGGING_SUPPORT
    int32_t xxJITServerPortArgIndex = FIND_ARG_IN_VMARGS(STARTSWITH_MATCH, xxJITServerPortOption, 0);
    int32_t xxJITServerTimeoutArgIndex = FIND_ARG_IN_VMARGS(STARTSWITH_MATCH, xxJITServerTimeoutOption, 0);
    int32_t xxJITServerSSLKeyArgIndex = FIND_ARG_IN_VMARGS(STARTSWITH_MATCH, xxJITServerSSLKeyOption, 0);
    int32_t xxJITServerSSLCertArgIndex = FIND_ARG_IN_VMARGS(STARTSWITH_MATCH, xxJITServerSSLCertOption, 0);
    int32_t xxJITServerSSLRootCertsArgIndex = FIND_ARG_IN_VMARGS(STARTSWITH_MATCH, xxJITServerSSLRootCertsOption, 0);
    #ifdef PERSISTENT_LOGGING_SUPPORT
+      const char *xxJITServerPersistentLoggingDatabasePortOption = "-XX:JITServerPersistentLoggingDatabasePort=";
+      const char *xxJITServerPersistentLoggingDatabaseAddressOption = "-XX:JITServerPersistentLoggingDatabaseAddress=";
+      const char *xxJITServerPersistentLoggingDatabaseNameOption = "-XX:JITServerPersistentLoggingDatabaseName=";
+      const char *xxJITServerPersistentLoggingDatabaseUsernameOption = "-XX:JITServerPersistentLoggingDatabaseUsername=";
+      const char *xxJITServerPersistentLoggingDatabasePasswordOption = "-XX:JITServerPersistentLoggingDatabasePassword=";
       int32_t xxJITServerPersistentLoggingDatabasePortArgIndex = FIND_ARG_IN_VMARGS(STARTSWITH_MATCH, xxJITServerPersistentLoggingDatabasePortOption, 0);
       int32_t xxJITServerPersistentLoggingDatabaseAddressArgIndex = FIND_ARG_IN_VMARGS(STARTSWITH_MATCH, xxJITServerPersistentLoggingDatabaseAddressOption, 0);
       int32_t xxJITServerPersistentLoggingDatabaseNameArgIndex = FIND_ARG_IN_VMARGS(STARTSWITH_MATCH, xxJITServerPersistentLoggingDatabaseNameOption, 0);
