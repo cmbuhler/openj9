@@ -94,7 +94,6 @@ outOfProcessCompilationEnd(
    if (compInfoPT->getCompilationInfo()->getPersistentInfo()->getJITServerPersistentLogging()
          && comp->getOption(TR_PersistentLogging)) //Check both server and client enable persistent logging.
       {
-      printf("Persistent Logging enabled\n");
       uint64_t clientUID = entry->getClientUID();
       const char* methodSignature = compInfoPT->getCompilation()->signature();
       TR::PersistentInfo* persistentInfo = compInfoPT->getCompilationInfo()->getPersistentInfo();
