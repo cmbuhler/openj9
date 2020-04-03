@@ -7,8 +7,7 @@
 class MongoLogger : public BasePersistentLogger
    {
 private:
-   //TODO: Allocate this with OpenJ9 Allocators.
-   char _uri_string[512];
+   char _uri_string[256];
    Omongoc_uri_t *_uri;
    Omongoc_client_t *_client;
    Omongoc_database_t *_db;
