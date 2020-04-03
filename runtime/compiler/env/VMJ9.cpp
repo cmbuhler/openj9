@@ -7006,7 +7006,7 @@ TR_J9VM::getClassFromSignature(const char * sig, int32_t sigLength, J9ConstantPo
    // For a non-array class type, strip off the first 'L' and last ';' of the
    // signature
    //
-   if (* sig == 'L' && sigLength > 2)
+   if ((*sig == 'L' || *sig == 'Q') && sigLength > 2)
       {
       sig += 1;
       sigLength -= 2;
@@ -8880,7 +8880,7 @@ TR_J9SharedCacheVM::isPrimitiveClass(TR_OpaqueClassBlock * classPointer)
    TR_ASSERT(comp, "Should be called only within a compilation");
 
    bool validated = false;
-   bool isPrimClass = TR_J9VMBase::isPrimitiveClass(classPointer);;
+   bool isPrimClass = TR_J9VMBase::isPrimitiveClass(classPointer);
 
    if (comp->getOption(TR_UseSymbolValidationManager))
       {
