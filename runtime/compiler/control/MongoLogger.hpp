@@ -52,7 +52,7 @@ public:
 
    ~MongoLogger();
 
-   bool logMethod(const char* method, uint64_t clientID, const char* logContent) override;
+   bool logMethod(const char* method, uint64_t clientID, const char* logContent, J9JITConfig* j9JitConfig) override;
    };
 
 #endif //MONGOLOGGER_HPP

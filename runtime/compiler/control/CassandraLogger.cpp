@@ -1,7 +1,5 @@
-#include <time.h>
 #include <stdio.h>
 #include "CassandraLogger.hpp"
-#include "j9.h"
 #include "LoadDBLibs.hpp"
 CassandraLogger::CassandraLogger(const char *databaseIP, uint32_t databasePort,
       const char *databaseName): BasePersistentLogger(databaseIP, databasePort, databaseName)
@@ -112,7 +110,7 @@ bool CassandraLogger::connect()
    }
 
 
-bool CassandraLogger::logMethod(const char *method, uint64_t clientID, const char *logContent)
+bool CassandraLogger::logMethod(const char *method, uint64_t clientID, const char *logContent, J9JITConfig* j9JitConfig)
    {
    // create table space and table first
    if (!createKeySpace()) 
@@ -147,21 +145,8 @@ bool CassandraLogger::logMethod(const char *method, uint64_t clientID, const cha
       Ocass_statement_free(statement);
       return false;
       }
-
-   // J9PortLibraryVersion portLibraryVersion;
-   // J9PortLibrary portLibrary;
-   // J9PORT_SET_VERSION(&portLibraryVersion, J9PORT_CAPABILITY_MASK);
-	// if (j9port_init_library(&portLibrary, &portLibraryVersion, sizeof(J9PortLibrary)) != 0) 
-   //    {
-   //    fprintf(stderr, "Persistent Logging - Cassandra Database Init J9port Library Error\n");
-   //    Ocass_statement_free(statement);
-   //    return false;
-   //    }
-   // UDATA success = 0;
-   // PORT_ACCESS_FROM_PORT(&portLibrary);
-   // uint64_t current_time = j9time_current_time_nanos(&success);
-   // printf("what is my time here %lu\n",current_time);
-   time_t now = time(NULL); /* Time in seconds from Epoch */
+   PORT_ACCESS_FROM_JITCONFIG(j9JitConfig);
+   uint64_t now = j9time_current_time_millis() / 1000; /* Time in seconds from Epoch */
    /* Converts the time since the Epoch in seconds to the 'date' type */
    Ocass_uint32_t year_month_day_of_insertion = Ocass_date_from_epoch(now);
    /* Converts the time since the Epoch in seconds to the 'time' type */

@@ -1,6 +1,7 @@
 #ifndef JITSERVERLOGGER_BASEPERSISTENTLOGGER_H
 #define JITSERVERLOGGER_BASEPERSISTENTLOGGER_H
 #include <stdint.h>
+#include "j9.h"
 
 class BasePersistentLogger
    {
@@ -30,7 +31,7 @@ class BasePersistentLogger
          _databaseUsername = databaseUsername;
          _databasePassword = databasePassword;
          }
-      virtual bool logMethod(const char* method, uint64_t clientID, const char *logContent) = 0;
+      virtual bool logMethod(const char* method, uint64_t clientID, const char *logContent, J9JITConfig* j9JitConfig) = 0;
    };
 
 #endif //JITSERVERLOGGER_BASEPERSISTENTLOGGER_H

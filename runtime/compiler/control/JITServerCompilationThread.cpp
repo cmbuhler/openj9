@@ -120,7 +120,7 @@ outOfProcessCompilationEnd(
       bool isConnected = logger.connect();
       if (isConnected)
          {
-         if (!logger.logMethod(methodSignature, clientUID, logFileStr.c_str()))
+         if (!logger.logMethod(methodSignature, clientUID, logFileStr.c_str(),compInfoPT->getJitConfig()))
             fprintf(stderr, "JITServer: Persistent Logging Error - Database insert failed, skipping persistent logging.");
          logger.disconnect();
          }

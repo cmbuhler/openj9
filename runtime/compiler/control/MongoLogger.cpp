@@ -147,7 +147,7 @@ void MongoLogger::disconnect()
    return;
    }
 
-bool MongoLogger::logMethod(const char* method, uint64_t clientID, const char* logContent)
+bool MongoLogger::logMethod(const char* method, uint64_t clientID, const char* logContent, J9JITConfig* j9JitConfig)
    {
    struct timespec t;
    clock_gettime(CLOCK_REALTIME, &t);

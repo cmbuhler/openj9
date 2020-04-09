@@ -17,7 +17,7 @@ class CassandraLogger : public BasePersistentLogger
       CassandraLogger(const char *databaseIP, uint32_t databasePort, const char *databaseName,
                      const char *databaseUsername, const char *databasePassword);
       CassandraLogger(const char *databaseIP, uint32_t databasePort, const char *databaseName);
-      bool logMethod(const char *method, uint64_t clientID, const char *logContent) override;
+      bool logMethod(const char *method, uint64_t clientID, const char *logContent, J9JITConfig* j9JitConfig) override;
    };
 
 #endif // CASSANDRALOGGER_H
