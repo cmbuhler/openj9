@@ -10,11 +10,9 @@ class BasePersistentLogger
       const char* _databaseUsername;
       const char* _databasePassword;
       const char* _databaseName;
-
    public:
       virtual bool connect() = 0;
       virtual void disconnect() = 0;
-      
       BasePersistentLogger(const char * databaseIP, uint32_t databasePort, const char * databaseName)
          {
          _databaseIP = databaseIP;

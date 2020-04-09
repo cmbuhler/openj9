@@ -135,11 +135,11 @@ class PersistentInfo : public OMR::PersistentInfoConnector
          _JITServerPort(38400),
 #if defined(MONGO_LOGGER) || defined(CASSANDRA_LOGGER)
          _JITServerPersistentLogging(false),
-         #if defined(CASSANDRA_LOGGER)
+#if defined(CASSANDRA_LOGGER)
          _JITServerPersistentLoggingDatabasePort(9042),
-         #elif defined(MONGO_LOGGER)
+#elif defined(MONGO_LOGGER)
          _JITServerPersistentLoggingDatabasePort(27017),
-         #endif //MONGO_LOGGER elif CASSANDRA_LOGGER
+#endif //MONGO_LOGGER elif CASSANDRA_LOGGER
          _JITServerPersistentLoggingDatabaseAddress("127.0.0.1"),
          _JITServerPersistentLoggingDatabaseUsername("admin"),
          _JITServerPersistentLoggingDatabaseName("jitserver_logs"),

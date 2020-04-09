@@ -101,7 +101,7 @@ namespace JITServer
          handle = loadLibmongoc();
          if (!handle)
             {
-            printf("#JITServer: Failed to load libmongoc\n");
+            fprintf(stderr, "#JITServer: Failed to load libmongoc\n");
             return false;
             }
 

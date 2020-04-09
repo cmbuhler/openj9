@@ -125,7 +125,9 @@ outOfProcessCompilationEnd(
          logger.disconnect();
          }
       else
-         fprintf(stderr, "JITServer: Persistent Logging Error - Database connection failed.\n");
+         {
+         fprintf(stderr, "JITServer: Persistent Logging Error - Database connection failed.\n"); 
+         }
       }
 #endif // defined(MONGO_LOGGER) || defined(CASSANDRA_LOGGER)
 
