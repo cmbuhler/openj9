@@ -120,12 +120,14 @@ outOfProcessCompilationEnd(
       bool isConnected = logger.connect();
       if (isConnected)
          {
-         if (!logger.logMethod(methodSignature, clientUID, logFileStr.c_str()))
+         if (!logger.logMethod(methodSignature, clientUID, logFileStr.c_str(),compInfoPT->getJitConfig()))
             fprintf(stderr, "JITServer: Persistent Logging Error - Database insert failed, skipping persistent logging.");
          logger.disconnect();
          }
       else
-         fprintf(stderr, "JITServer: Persistent Logging Error - Database connection failed.\n");
+         {
+         fprintf(stderr, "JITServer: Persistent Logging Error - Database connection failed.\n"); 
+         }
       }
 #endif // defined(MONGO_LOGGER) || defined(CASSANDRA_LOGGER)
 

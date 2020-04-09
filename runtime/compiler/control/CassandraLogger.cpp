@@ -1,11 +1,8 @@
-#include <time.h>
 #include <stdio.h>
-
 #include "CassandraLogger.hpp"
 #include "LoadDBLibs.hpp"
-CassandraLogger::CassandraLogger(const char *databaseIP,
-uint32_t databasePort,
-const char *databaseName): BasePersistentLogger(databaseIP, databasePort, databaseName)
+CassandraLogger::CassandraLogger(const char *databaseIP, uint32_t databasePort,
+      const char *databaseName): BasePersistentLogger(databaseIP, databasePort, databaseName)
    {
    _session = NULL;
    _connectFuture = NULL;
@@ -26,7 +23,6 @@ bool CassandraLogger::createKeySpace()
    char queryString[256]; 
    snprintf(queryString, 256, "CREATE KEYSPACE IF NOT EXISTS %s  WITH REPLICATION = {'class':'SimpleStrategy','replication_factor':1};", _databaseName); 
    OCassStatement* statement = Ocass_statement_new(queryString, 0);
-
    OCassFuture* queryFuture = Ocass_session_execute(_session, statement);
    Ocass_statement_free(statement);
    if (Ocass_future_error_code(queryFuture) != 0)
@@ -36,14 +32,11 @@ bool CassandraLogger::createKeySpace()
       size_t messageLength;
       Ocass_future_error_message(queryFuture, &message, &messageLength);
       fprintf(stderr, "PersistentLogging - Cassandra Database Keyspace Creation Error: '%.*s'\n", (int)messageLength, message);
-      
       Ocass_future_free(queryFuture);
       return false;
       }
-
    Ocass_future_free(queryFuture);
    return true;
-
 }
 bool CassandraLogger::createTable(const char *tableName) 
    {
@@ -59,11 +52,9 @@ bool CassandraLogger::createTable(const char *tableName)
       size_t messageLength;
       Ocass_future_error_message(queryFuture, &message, &messageLength);
       fprintf(stderr, "Persistent Logging - Cassandra Database Table Creation Error: '%.*s'\n", (int)messageLength, message);
-      
       Ocass_future_free(queryFuture);
       return false;
       }
-
    Ocass_future_free(queryFuture);
    return true;
    }
@@ -82,9 +73,7 @@ bool CassandraLogger::connect()
       Ocass_session_free(_session);
       Ocass_cluster_free(_cluster);
       return false;
-
       }
-
    /* Add contact points */
    int rc_set_ip = Ocass_cluster_set_contact_points(_cluster, _databaseIP);
    if (rc_set_ip != 0)
@@ -93,9 +82,7 @@ bool CassandraLogger::connect()
       Ocass_session_free(_session);
       Ocass_cluster_free(_cluster);
       return false;
-
       }
-
    /*Set port number*/
    int rc_set_port = Ocass_cluster_set_port(_cluster, _databasePort);
    if (rc_set_port != 0)
@@ -103,14 +90,10 @@ bool CassandraLogger::connect()
       fprintf(stderr, "Persistent Logging - Cassandra Database Error: %s\n",Ocass_error_desc(rc_set_port));
       Ocass_session_free(_session);
       Ocass_cluster_free(_cluster);
-      
       return false;
-
       }
-
    /* Provide the cluster object as configuration to connect the session */
    _connectFuture = Ocass_session_connect(_session, _cluster);
-
    if (Ocass_future_error_code(_connectFuture) != 0)
       {
       /* Display connection error message */
@@ -124,23 +107,20 @@ bool CassandraLogger::connect()
       return false;
       }
    return true;
-
    }
 
 
-bool CassandraLogger::logMethod(const char *method, uint64_t clientID, const char *logContent)
+bool CassandraLogger::logMethod(const char *method, uint64_t clientID, const char *logContent, J9JITConfig* j9JitConfig)
    {
-      
    // create table space and table first
-   if (!createKeySpace()) return false;
+   if (!createKeySpace()) 
+      return false;
    const char* tableName = "logs";
-   if (!createTable(tableName)) return false;
+   if (!createTable(tableName)) 
+      return false;
    char queryString[256];
-   
    snprintf(queryString, 256, "INSERT INTO %s.%s (clientID, methodName, logContent, insertionDate, insertionTime) VALUES (?, ?, ?, ?, ?)", _databaseName,tableName);
-   OCassStatement* statement
-   = Ocass_statement_new(queryString, 5);
-
+   OCassStatement* statement = Ocass_statement_new(queryString, 5);
    /* Bind the values using the indices of the bind variables */
    char strClientID[64];
    snprintf(strClientID, 64, "%lu", clientID);
@@ -151,7 +131,6 @@ bool CassandraLogger::logMethod(const char *method, uint64_t clientID, const cha
       Ocass_statement_free(statement);
       return false;
       }
-
    int rc_set_bind_method = Ocass_statement_bind_string(statement, 1, method);
    if (rc_set_bind_pk != 0)
       {
@@ -160,23 +139,20 @@ bool CassandraLogger::logMethod(const char *method, uint64_t clientID, const cha
       return false;
       }
    int rc_set_bind_log_content = Ocass_statement_bind_string(statement, 2, logContent);
-
    if (rc_set_bind_log_content != 0)
       {
       fprintf(stderr, "Persistent Logging - Cassandra Database Error: %s\n",Ocass_error_desc(rc_set_bind_log_content));
       Ocass_statement_free(statement);
       return false;
       }
-
-   time_t now = time(NULL); /* Time in seconds from Epoch */
+   PORT_ACCESS_FROM_JITCONFIG(j9JitConfig);
+   uint64_t now = j9time_current_time_millis() / 1000; /* Time in seconds from Epoch */
    /* Converts the time since the Epoch in seconds to the 'date' type */
    Ocass_uint32_t year_month_day_of_insertion = Ocass_date_from_epoch(now);
    /* Converts the time since the Epoch in seconds to the 'time' type */
    Ocass_int64_t time_of_insertion = Ocass_time_from_epoch(now);
-
    /* 'date' uses an unsigned 32-bit integer */
    int rc_set_bind_insertion_date = Ocass_statement_bind_uint32(statement, 3, year_month_day_of_insertion);
-   
    if (rc_set_bind_insertion_date != 0)
       {
       fprintf(stderr, "Persistent Logging - Cassandra Database Error: %s\n", Ocass_error_desc(rc_set_bind_insertion_date));
@@ -191,9 +167,7 @@ bool CassandraLogger::logMethod(const char *method, uint64_t clientID, const cha
       Ocass_statement_free(statement);
       return false;
       }
-
    OCassFuture* queryFuture = Ocass_session_execute(_session, statement);
-
    /* Statement objects can be freed immediately after being executed */
    Ocass_statement_free(statement);
    if (Ocass_future_error_code(queryFuture) != 0)
@@ -206,11 +180,9 @@ bool CassandraLogger::logMethod(const char *method, uint64_t clientID, const cha
       Ocass_future_free(queryFuture);
       return false;
       }
-
    Ocass_future_free(queryFuture);
    return true; 
    }
-
 
 void CassandraLogger::disconnect()
    {

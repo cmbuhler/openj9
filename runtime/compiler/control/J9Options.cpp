@@ -1092,17 +1092,6 @@ static void JITServerParseCommonOptions(J9JavaVM *vm, TR::CompilationInfo *compI
    int32_t xxJITServerPersistentLoggingDatabaseNameArgIndex = FIND_ARG_IN_VMARGS(STARTSWITH_MATCH, xxJITServerPersistentLoggingDatabaseNameOption, 0);
    int32_t xxJITServerPersistentLoggingDatabaseUsernameArgIndex = FIND_ARG_IN_VMARGS(STARTSWITH_MATCH, xxJITServerPersistentLoggingDatabaseUsernameOption, 0);
    int32_t xxJITServerPersistentLoggingDatabasePasswordArgIndex = FIND_ARG_IN_VMARGS(STARTSWITH_MATCH, xxJITServerPersistentLoggingDatabasePasswordOption, 0);
-#endif // defined(MONGO_LOGGER) || ...
-   
-   if (xxJITServerPortArgIndex >= 0)
-      {
-      uint32_t port=0;
-      IDATA ret = GET_INTEGER_VALUE(xxJITServerPortArgIndex, xxJITServerPortOption, port);
-      if (ret == OPTION_OK)
-         compInfo->getPersistentInfo()->setJITServerPort(port);
-      }
-
-#if defined(MONGO_LOGGER) || defined(CASSANDRA_LOGGER)
    if (xxJITServerPersistentLoggingArgIndex >= 0)
       {
       bool enable = false;
@@ -1144,6 +1133,13 @@ static void JITServerParseCommonOptions(J9JavaVM *vm, TR::CompilationInfo *compI
       compInfo->getPersistentInfo()->setJITServerPersistentLoggingDatabaseAddress(address);
       }
 #endif // defined(MONGO_LOGGER) || ...
+   if (xxJITServerPortArgIndex >= 0)
+   {
+   uint32_t port=0;
+   IDATA ret = GET_INTEGER_VALUE(xxJITServerPortArgIndex, xxJITServerPortOption, port);
+   if (ret == OPTION_OK)
+      compInfo->getPersistentInfo()->setJITServerPort(port);
+   }
 
    if (xxJITServerTimeoutArgIndex >= 0)
       {

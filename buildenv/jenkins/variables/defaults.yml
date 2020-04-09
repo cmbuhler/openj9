@@ -183,8 +183,7 @@ ppc64le_linux:
   node_labels:
     build: 'ci.role.build && hw.arch.ppc64le && sw.os.ubuntu'
   extra_configure_options:
-    8: '--enable-jitserver'
-    11: '--enable-jitserver'
+    all: '--enable-jitserver'
   build_env:
     vars: 'PATH+GCC7=/usr/local/gcc-7.5.0/bin LD_LIBRARY_PATH=/usr/local/gcc-7.5.0/lib64:$LD_LIBRARY_PATH'
 #========================================#
@@ -199,10 +198,8 @@ ppc64le_linux_xl:
   extends: ['ppc64le_linux', 'largeheap']
   excluded_tests:
     8:
-      - sanity.openjdk
       - special.system
     11:
-      - sanity.openjdk
       - special.system
 #========================================#
 # Linux PPCLE 64bits Compressed Pointers /w JITSERVER
@@ -237,10 +234,7 @@ s390x_linux:
 s390x_linux_xl:
   extends: ['s390x_linux', 'largeheap']
   excluded_tests:
-    8:
-      - sanity.openjdk
-    11:
-      - sanity.openjdk
+     11:
       - special.system
 #========================================#
 # Linux S390 64bits Compressed Pointers /w JITSERVER
@@ -253,10 +247,10 @@ s390x_linux_jit:
 ppc64_aix:
   extends: ['debuginfo', 'freemarker', 'openjdk_reference_repo', 'openssl']
   boot_jdk:
-    8: '/usr/java7'
-    11: '/usr/java11_64'
-    14: '/usr/java13_64'
-    next: '/usr/java13_64'
+    8: '/opt/java7'
+    11: '/opt/java11_64'
+    14: '/opt/java13_64'
+    next: '/opt/java13_64'
   release:
     all: 'aix-ppc64-server-release'
     8: 'aix-ppc64-normal-server-release'
@@ -276,10 +270,6 @@ ppc64_aix:
       14: 'PATH+XLC=/opt/IBM/xlC/16.1.0/bin:/opt/IBM/xlc/16.1.0/bin CC=xlclang CXX=xlclang++'
       next: 'PATH+XLC=/opt/IBM/xlC/16.1.0/bin:/opt/IBM/xlc/16.1.0/bin CC=xlclang CXX=xlclang++'
   excluded_tests:
-    8:
-      - sanity.openjdk
-    11:
-      - sanity.openjdk
       - special.system
 #========================================#
 # Linux x86 64bits Compressed Pointers
@@ -298,8 +288,7 @@ x86-64_linux:
   node_labels:
     build: 'ci.role.build && hw.arch.x86 && sw.os.cent.6'
   extra_configure_options:
-    8: '--enable-jitserver'
-    11: '--enable-jitserver'
+    all: '--enable-jitserver'
   build_env:
     cmd: 'source /home/jenkins/set_gcc7.5.0_env'
     vars: 'OPENJ9_JAVA_OPTIONS=-Xdump:system+java:events=systhrow,filter=java/lang/ClassCastException,request=exclusive+prepwalk+preempt'
@@ -323,10 +312,7 @@ x86-64_linux_xl:
   extends: ['x86-64_linux', 'largeheap']
   excluded_tests:
     8:
-      - sanity.openjdk
       - special.system
-    11:
-      - sanity.openjdk
 #========================================#
 # Linux x86 64bits Compressed Pointers / Valhalla
 #========================================#
@@ -375,10 +361,7 @@ x86-64_windows:
   build_env:
     vars: 'PATH+TOOLS=/cygdrive/c/openjdk/LLVM64/bin:/cygdrive/c/openjdk/nasm-2.13.03'
   excluded_tests:
-    8:
-      - sanity.openjdk
     11:
-      - sanity.openjdk
       - special.system
 #========================================#
 # Windows x86 64bits Large Heap
@@ -405,10 +388,7 @@ x86-32_windows:
       8: 'PATH+TOOLS=/cygdrive/c/openjdk/LLVM32/bin:/cygdrive/c/openjdk/nasm-2.13.03'
   excluded_tests:
     8:
-      - sanity.openjdk
       - special.system
-    11:
-      - sanity.openjdk
 #========================================#
 # OSX x86 64bits Compressed Pointers
 #========================================#
@@ -436,10 +416,7 @@ x86-64_mac:
       all: 'OPENJ9_JAVA_OPTIONS=-Xdump:system+java:events=systhrow,filter=java/lang/ClassCastException,request=exclusive+prepwalk+preempt'
       8: 'MACOSX_DEPLOYMENT_TARGET=10.9.0 SDKPATH=/Users/jenkins/Xcode4/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX10.8.sdk'
   excluded_tests:
-    8:
-      - sanity.openjdk
     11:
-      - sanity.openjdk
       - special.system
 #========================================#
 # OSX x86 64bits Large Heap

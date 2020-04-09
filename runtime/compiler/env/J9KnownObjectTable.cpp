@@ -63,103 +63,6 @@ J9::KnownObjectTable::isNull(Index index)
 
 
 TR::KnownObjectTable::Index
-J9::KnownObjectTable::getIndex(uintptr_t objectPointer)
-   {
-   if (objectPointer == 0)
-      return 0; // Special Index value for NULL
-
-   uint32_t nextIndex = self()->getEndIndex();
-#if defined(J9VM_OPT_JITSERVER)
-   if (self()->comp()->isOutOfProcessCompilation())
-      {
-      TR_ASSERT_FATAL(false, "It is not safe to call getIndex() at the server. The object pointer could have become stale at the client.");
-      auto stream = TR::CompilationInfo::getStream();
-      stream->write(JITServer::MessageType::KnownObjectTable_getOrCreateIndex, objectPointer);
-      auto recv = stream->read<TR::KnownObjectTable::Index, uintptr_t *>();
-
-      TR::KnownObjectTable::Index index = std::get<0>(recv);
-      uintptr_t *objectReferenceLocation = std::get<1>(recv);
-      TR_ASSERT_FATAL(index <= nextIndex, "The KOT index %d at the client is greater than the KOT index %d at the server", index, nextIndex);
-
-      if (index < nextIndex)
-         {
-         return index;
-         }
-      else
-         {
-         updateKnownObjectTableAtServer(index, objectReferenceLocation);
-         }
-      }
-   else
-#endif /* defined(J9VM_OPT_JITSERVER) */
-      {
-      TR_J9VMBase *fej9 = (TR_J9VMBase *)(self()->fe());
-      TR_ASSERT(fej9->haveAccess(), "Must haveAccess in J9::KnownObjectTable::getIndex");
-
-      // Search for existing matching entry
-      //
-      for (uint32_t i = 1; i < nextIndex; i++)
-         if (*_references.element(i) == objectPointer)
-            return i;
-
-      // No luck -- allocate a new one
-      //
-      J9VMThread *thread = getJ9VMThreadFromTR_VM(self()->fe());
-      TR_ASSERT(thread, "assertion failure");
-      _references.setSize(nextIndex+1);
-      _references[nextIndex] = (uintptr_t*)thread->javaVM->internalVMFunctions->j9jni_createLocalRef((JNIEnv*)thread, (j9object_t)objectPointer);
-      }
-
-   return nextIndex;
-   }
-
-
-TR::KnownObjectTable::Index
-J9::KnownObjectTable::getIndex(uintptr_t objectPointer, bool isArrayWithConstantElements)
-   {
-   TR::KnownObjectTable::Index index = self()->getIndex(objectPointer);
-   if (isArrayWithConstantElements)
-      {
-      self()->addArrayWithConstantElements(index);
-      }
-   return index;
-   }
-
-
-TR::KnownObjectTable::Index
-J9::KnownObjectTable::getIndexAt(uintptr_t *objectReferenceLocation)
-   {
-   TR::KnownObjectTable::Index result = UNKNOWN;
-#if defined(J9VM_OPT_JITSERVER)
-   if (self()->comp()->isOutOfProcessCompilation())
-      {
-      auto stream = TR::CompilationInfo::getStream();
-      stream->write(JITServer::MessageType::KnownObjectTable_getOrCreateIndexAt, objectReferenceLocation);
-      result = std::get<0>(stream->read<TR::KnownObjectTable::Index>());
-
-      updateKnownObjectTableAtServer(result, objectReferenceLocation);
-      }
-   else
-#endif /* defined(J9VM_OPT_JITSERVER) */
-      {
-      TR::VMAccessCriticalSection getIndexAtCriticalSection(self()->comp());
-      uintptr_t objectPointer = *objectReferenceLocation; // Note: object references held as uintptr_t must never be compressed refs
-      result = self()->getIndex(objectPointer);
-      }
-   return result;
-   }
-
-TR::KnownObjectTable::Index
-J9::KnownObjectTable::getIndexAt(uintptr_t *objectReferenceLocation, bool isArrayWithConstantElements)
-   {
-   Index result = self()->getIndexAt(objectReferenceLocation);
-   if (isArrayWithConstantElements)
-      self()->addArrayWithConstantElements(result);
-   return result;
-   }
-
-
-TR::KnownObjectTable::Index
 J9::KnownObjectTable::getOrCreateIndex(uintptr_t objectPointer)
    {
    if (objectPointer == 0)
@@ -232,9 +135,12 @@ J9::KnownObjectTable::getOrCreateIndexAt(uintptr_t *objectReferenceLocation)
       {
       auto stream = TR::CompilationInfo::getStream();
       stream->write(JITServer::MessageType::KnownObjectTable_getOrCreateIndexAt, objectReferenceLocation);
-      result = std::get<0>(stream->read<TR::KnownObjectTable::Index>());
+      auto recv = stream->read<TR::KnownObjectTable::Index, uintptr_t *>();
 
-      updateKnownObjectTableAtServer(result, objectReferenceLocation);
+      result = std::get<0>(recv);
+      uintptr_t *objectReferenceLocationClient = std::get<1>(recv);
+
+      updateKnownObjectTableAtServer(result, objectReferenceLocationClient);
       }
    else
 #endif /* defined(J9VM_OPT_JITSERVER) */
@@ -324,10 +230,10 @@ J9::KnownObjectTable::getPointerLocation(Index index)
 
 #if defined(J9VM_OPT_JITSERVER)
 void
-J9::KnownObjectTable::updateKnownObjectTableAtServer(Index index, uintptr_t *objectReferenceLocation)
+J9::KnownObjectTable::updateKnownObjectTableAtServer(Index index, uintptr_t *objectReferenceLocationClient)
    {
    TR_ASSERT_FATAL(self()->comp()->isOutOfProcessCompilation(), "updateKnownObjectTableAtServer should only be called at the server");
-   TR_ASSERT(objectReferenceLocation, "objectReferenceLocation should not be NULL");
+   TR_ASSERT(objectReferenceLocationClient, "objectReferenceLocationClient should not be NULL");
 
    if (index == TR::KnownObjectTable::UNKNOWN)
       return;
@@ -337,13 +243,14 @@ J9::KnownObjectTable::updateKnownObjectTableAtServer(Index index, uintptr_t *obj
    if (index == nextIndex)
       {
       _references.setSize(nextIndex+1);
-      _references[nextIndex] = objectReferenceLocation;
+      _references[nextIndex] = objectReferenceLocationClient;
       }
    else if (index < nextIndex)
       {
-      TR_ASSERT((objectReferenceLocation == _references[index]), "_references[%d]=%p is not the same as the client KOT[%d]=%p. _references.size()=%u",
-                  index, _references[index], index, objectReferenceLocation, nextIndex);
-      _references[index] = objectReferenceLocation;
+      TR_ASSERT((objectReferenceLocationClient == _references[index]),
+            "comp %p: server _references[%d]=%p is not the same as the client _references[%d]=%p (total size = %u)",
+            self()->comp(), index, _references[index], index, objectReferenceLocationClient, nextIndex);
+      _references[index] = objectReferenceLocationClient;
       }
    else
       {
