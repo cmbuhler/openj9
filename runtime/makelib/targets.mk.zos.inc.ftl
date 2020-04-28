@@ -1,5 +1,5 @@
 <#--
-Copyright (c) 1998, 2019 IBM Corp. and others
+Copyright (c) 1998, 2020 IBM Corp. and others
 
 This program and the accompanying materials are made available under
 the terms of the Eclipse Public License 2.0 which accompanies this
@@ -68,7 +68,9 @@ ifdef j9vm_uma_supportsIpv6
   UMA_ZOS_FLAGS += -DIPv6_FUNCTION_SUPPORT
 endif
 
-UMA_ZOS_FLAGS += -DJ9ZOS390 -DLONGLONG -DJ9VM_TIERED_CODE_CACHE -D_ALL_SOURCE -D_XOPEN_SOURCE_EXTENDED -DIBM_ATOE -D_POSIX_SOURCE
+# _ISOC99_SOURCE Exposes c99 standard library changes which dont require c99 compiler support. (Also needed for c++, see below)
+# __STDC_LIMIT_MACROS Is needed to expose limit macros from <stdint.h> on c++ (also requires _ISOC99_SOURCE)
+UMA_ZOS_FLAGS += -DJ9ZOS390 -DLONGLONG -DJ9VM_TIERED_CODE_CACHE -D_ALL_SOURCE -D_XOPEN_SOURCE_EXTENDED -DIBM_ATOE -D_POSIX_SOURCE -D_ISOC99_SOURCE -D__STDC_LIMIT_MACROS
 UMA_ZOS_FLAGS += -I$(OMR_DIR)/util/a2e/headers $(UMA_OPTIMIZATION_FLAGS) $(UMA_OPTIMIZATION_LINKER_FLAGS) \
 	-Wc,"convlit(ISO8859-1),xplink,rostring,FLOAT(IEEE,FOLD,AFP),enum(4)" -Wa,goff -Wc,NOANSIALIAS -Wc,"inline(auto,noreport,600,5000)"
 UMA_ZOS_FLAGS += -Wc,"SERVICE(j${uma.buildinfo.build_date})" -Wc,"TARGET(zOSV1R13)"
@@ -126,10 +128,17 @@ endif
 MRABIG = -Wc,"TBYDBG(-qdebug=MRABIG)"
 SPECIALCXXFLAGS = $(filter-out -Wc$(COMMA)debug -O3,$(CXXFLAGS))
 NEW_OPTIMIZATION_FLAG = -O2 -Wc,"TBYDBG(-qdebug=lincomm:ptranl:tfbagg)" -Wc,"FEDBG(-qxflag=InlineDespiteVolatileInArgs)"
-BytecodeInterpreter.o : BytecodeInterpreter.cpp
+
+BytecodeInterpreterFull.o : BytecodeInterpreterFull.cpp
 	$(CXX) $(SPECIALCXXFLAGS) $(MRABIG) $(NEW_OPTIMIZATION_FLAG) -c $< > $*.asmlist
 
-DebugBytecodeInterpreter.o : DebugBytecodeInterpreter.cpp
+BytecodeInterpreterCompressed.o : BytecodeInterpreterCompressed.cpp
+	$(CXX) $(SPECIALCXXFLAGS) $(MRABIG) $(NEW_OPTIMIZATION_FLAG) -c $< > $*.asmlist
+
+DebugBytecodeInterpreterFull.o : DebugBytecodeInterpreterFull.cpp
+	$(CXX) $(SPECIALCXXFLAGS) $(MRABIG) $(NEW_OPTIMIZATION_FLAG) -c $< > $*.asmlist
+
+DebugBytecodeInterpreterCompressed.o : DebugBytecodeInterpreterCompressed.cpp
 	$(CXX) $(SPECIALCXXFLAGS) $(MRABIG) $(NEW_OPTIMIZATION_FLAG) -c $< > $*.asmlist
 
 MHInterpreter$(UMA_DOT_O) : MHInterpreter.cpp

@@ -1,8 +1,5 @@
-/*[INCLUDE-IF Sidecar16]*/
-package com.ibm.oti.reflect;
-
 /*******************************************************************************
- * Copyright (c) 2005, 2010 IBM Corp. and others
+ * Copyright (c) 2020, 2020 IBM Corp. and others
  *
  * This program and the accompanying materials are made available under
  * the terms of the Eclipse Public License 2.0 which accompanies this
@@ -23,32 +20,7 @@ package com.ibm.oti.reflect;
  * SPDX-License-Identifier: EPL-2.0 OR Apache-2.0 OR GPL-2.0 WITH Classpath-exception-2.0 OR LicenseRef-GPL-2.0 WITH Assembly-exception
  *******************************************************************************/
 
-import java.lang.annotation.Annotation;
-import java.lang.ref.SoftReference;
+#include "j9nonbuilder.h"
 
-public class Field {
-	private java.lang.reflect.Field field;
-	private SoftReference<Annotations> annotations;
-	
-public Field(java.lang.reflect.Field field) {
-	this.field = field;
-}
-
-private synchronized Annotations getAnnotations() {
-	Annotations ans;
-	if (annotations == null || (ans = annotations.get()) == null) {
-		annotations = new SoftReference<Annotations>(ans = new Annotations(AnnotationParser.parseAnnotations(field)));
-	}
-	return ans;
-}
-
-public <T extends Annotation> T getAnnotation(Class<T> cl) {
-	if (cl == null) throw new NullPointerException();
-	return getAnnotations().getAnnotation(cl);
-}
-
-public Annotation[] getDeclaredAnnotations() {
-	return getAnnotations().getAnnotations().clone();
-}
-
-}
+#undef J9VMTHREAD_COMPRESS_OBJECT_REFERENCES
+#undef J9JAVAVM_COMPRESS_OBJECT_REFERENCES

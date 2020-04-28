@@ -1,8 +1,5 @@
-/*[INCLUDE-IF Sidecar16]*/
-package com.ibm.oti.reflect;
-
 /*******************************************************************************
- * Copyright (c) 2005, 2010 IBM Corp. and others
+ * Copyright (c) 2020, 2020 IBM Corp. and others
  *
  * This program and the accompanying materials are made available under
  * the terms of the Eclipse Public License 2.0 which accompanies this
@@ -23,36 +20,13 @@ package com.ibm.oti.reflect;
  * SPDX-License-Identifier: EPL-2.0 OR Apache-2.0 OR GPL-2.0 WITH Classpath-exception-2.0 OR LicenseRef-GPL-2.0 WITH Assembly-exception
  *******************************************************************************/
 
-import java.lang.annotation.Annotation;
-import java.lang.ref.SoftReference;
+#include "j9cfg.h"
 
-public class Constructor {
-	private java.lang.reflect.Constructor constructor;
-	private SoftReference<Annotations> annotations;
-	
-public Constructor(java.lang.reflect.Constructor constructor) {
-	this.constructor = constructor;
-}
-
-private synchronized Annotations getAnnotations() {
-	Annotations ans;
-	if (annotations == null || (ans = annotations.get()) == null) {
-		annotations = new SoftReference<Annotations>(ans = new Annotations(AnnotationParser.parseAnnotations(constructor)));
-	}
-	return ans;
-}
-
-public <T extends Annotation> T getAnnotation(Class<T> cl) {
-	if (cl == null) throw new NullPointerException();
-	return getAnnotations().getAnnotation(cl);
-}
-
-public Annotation[] getDeclaredAnnotations() {
-	return getAnnotations().getAnnotations().clone();
-}
-
-public Annotation[][] getParameterAnnotations() {
-	return AnnotationParser.parseParameterAnnotations(constructor);
-}
-
-}
+#if defined(OMR_GC_FULL_POINTERS)
+#define J9_OVERRIDE_COMPRESS_OBJECT_REFERENCES 0
+#define LOOP_NAME bytecodeLoopFull
+#define INTERPRETER_CLASS VM_BytecodeInterpreterFull
+#include "BytecodeInterpreter.inc"
+#else
+#define LOOP_NAME 0
+#endif /* OMR_GC_FULL_POINTERS */

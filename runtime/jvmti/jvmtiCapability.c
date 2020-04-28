@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 1991, 2019 IBM Corp. and others
+ * Copyright (c) 1991, 2020 IBM Corp. and others
  *
  * This program and the accompanying materials are made available under
  * the terms of the Eclipse Public License 2.0 which accompanies this
@@ -174,7 +174,10 @@ jvmtiGetPotentialCapabilities(jvmtiEnv* env, jvmtiCapabilities* capabilities_ptr
 	}
 
 #if JAVA_SPEC_VERSION >= 11
-	if (isEventHookable(j9env, JVMTI_EVENT_SAMPLED_OBJECT_ALLOC)) {
+	if (isEventHookable(j9env, JVMTI_EVENT_SAMPLED_OBJECT_ALLOC)
+		&& (J9_GC_POLICY_METRONOME != vm->gcPolicy)
+		&& (J9_GC_POLICY_BALANCED != vm->gcPolicy)
+	) {
 		rv_capabilities.can_generate_sampled_object_alloc_events = 1;
 	}
 #endif /* JAVA_SPEC_VERSION >= 11 */
@@ -382,7 +385,7 @@ jvmtiAddCapabilities(jvmtiEnv* env,
 			 * or set by command line option -Xgc:allocationSamplingGranularity.
 			 * Set it to 512KB which is default sampling interval as per JEP 331 specification.
 			 */
-			vm->memoryManagerFunctions->j9gc_set_allocation_sampling_interval(currentThread, 512 * 1024);
+			vm->memoryManagerFunctions->j9gc_set_allocation_sampling_interval(vm, 512 * 1024);
 			jvmtiData->flags |= J9JVMTI_FLAG_SAMPLED_OBJECT_ALLOC_ENABLED;
 		}
 #endif /* JAVA_SPEC_VERSION >= 11 */
@@ -475,8 +478,9 @@ jvmtiRelinquishCapabilities(jvmtiEnv* env,
 
 #if JAVA_SPEC_VERSION >= 11
 		if (capabilities_ptr->can_generate_sampled_object_alloc_events) {
-			/* The default sampling interval is not changed. */
 			jvmtiData->flags &= ~J9JVMTI_FLAG_SAMPLED_OBJECT_ALLOC_ENABLED;
+			/* Set sampling interval to UDATA_MAX to inform GC that sampling is not required */
+			vm->memoryManagerFunctions->j9gc_set_allocation_sampling_interval(vm, UDATA_MAX);
 		}
 #endif /* JAVA_SPEC_VERSION >= 11 */
 

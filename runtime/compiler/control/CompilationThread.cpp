@@ -49,6 +49,7 @@
 #include "codegen/PrivateLinkage.hpp"
 #include "compile/CompilationTypes.hpp"
 #include "compile/ResolvedMethod.hpp"
+#include "control/JitDump.hpp"
 #include "control/Recompilation.hpp"
 #include "control/RecompilationInfo.hpp"
 #include "control/MethodToBeCompiled.hpp"
@@ -193,19 +194,6 @@ TR::CompilationInfoPerThreadBase::setCompilation(TR::Compilation *compiler)
 #endif
    _compiler = compiler;
    }
-
-#ifdef J9VM_RAS_DUMP_AGENTS
-static UDATA
-blankDumpSignalHandler(struct J9PortLibrary *portLibrary, U_32 gpType, void *gpInfo, void *arg)
-   {
-   J9VMThread *vmThread = (J9VMThread *) arg;
-   TR_VerboseLog::writeLineLocked(TR_Vlog_JITDUMP, "vmThread=%p Recursive crash occurred. Aborting JIT dump.", vmThread);
-
-   // Returning J9PORT_SIG_EXCEPTION_RETURN will make us come back to the same crashing instruction over and over
-   //
-   return J9PORT_SIG_EXCEPTION_RETURN; // FIXME: is this the right return type? - This appears to be the right return type
-   }
-#endif
 
 #if defined(J9VM_OPT_JITSERVER)
 thread_local TR::CompilationInfoPerThread *TR::compInfoPT;
@@ -602,17 +590,19 @@ bool TR::CompilationInfo::importantMethodForStartup(J9Method *method)
 bool TR::CompilationInfo::shouldDowngradeCompReq(TR_MethodToBeCompiled *entry)
    {
    bool doDowngrade = false;
-   J9Method *method = entry->getMethodDetails().getMethod();
+   TR::IlGeneratorMethodDetails& methodDetails = entry->getMethodDetails();
+   J9Method *method = methodDetails.getMethod();
 #ifdef J9VM_OPT_JITSERVER
    TR_ASSERT(getPersistentInfo()->getRemoteCompilationMode() != JITServer::SERVER, "shouldDowngradeCompReq should not be used by JITServer");
 #endif
-   if (!isCompiled(method) && /*entry->_priority <= CP_ASYNC_MAX &&*/
+   if (!isCompiled(method) &&
        entry->_optimizationPlan->getOptLevel() == warm && // only warm compilations are subject to downgrades
-       !entry->isDLTCompile() &&
+       !methodDetails.isMethodInProgress() &&
+       !methodDetails.isJitDumpMethod() &&
        !TR::Options::getCmdLineOptions()->getOption(TR_DontDowngradeToCold))
       {
       TR::PersistentInfo *persistentInfo = getPersistentInfo();
-      const J9ROMMethod * romMethod = entry->getMethodDetails().getRomMethod();
+      const J9ROMMethod * romMethod = methodDetails.getRomMethod();
       TR_J9VMBase *fe = TR_J9VMBase::get(_jitConfig, NULL);
 
       // Don't downgrade if method is JSR292. See CMVC 200145
@@ -718,7 +708,7 @@ bool TR::CompilationInfo::shouldDowngradeCompReq(TR_MethodToBeCompiled *entry)
          // Always downgrade J9VMInternals because they are expensive
          if (!doDowngrade)
             {
-            J9UTF8 * className = J9ROMCLASS_CLASSNAME(entry->getMethodDetails().getRomClass());
+            J9UTF8 * className = J9ROMCLASS_CLASSNAME(methodDetails.getRomClass());
             if (className->length == 23 && !memcmp(utf8Data(className), "java/lang/J9VMInternals", 23))
                {
                doDowngrade = true;
@@ -3892,7 +3882,7 @@ TR::CompilationInfoPerThread::processEntries()
       {
       TR_VerboseLog::writeLineLocked(
          TR_Vlog_DISPATCH,
-         "Starting to process queue entries. compThread=%d state=%d Q_SZ=%d Q_SZI=%d QW=%d\n",
+         "Starting to process queue entries. compThreadID=%d state=%d Q_SZ=%d Q_SZI=%d QW=%d\n",
          getCompThreadId(),
          getCompilationThreadState(),
          _compInfo.getMethodQueueSize(),
@@ -3971,7 +3961,7 @@ TR::CompilationInfoPerThread::processEntries()
                      }
                   if (TR::Options::getVerboseOption(TR_VerboseCompilationDispatch))
                      {
-                     TR_VerboseLog::writeLineLocked(TR_Vlog_DISPATCH, "compThread=%d woke up after timeout on compMonitor\n", getCompThreadId());
+                     TR_VerboseLog::writeLineLocked(TR_Vlog_DISPATCH, "compThreadID=%d woke up after timeout on compMonitor\n", getCompThreadId());
                      }
                   }
                }
@@ -5732,7 +5722,7 @@ void *TR::CompilationInfo::compileOnSeparateThread(J9VMThread * vmThread, TR::Il
    //
    if (!details.isMethodInProgress())
       startPC = startPCIfAlreadyCompiled(vmThread, details, oldStartPC);
-   if (startPC && !details.isDumpMethod() &&
+   if (startPC && !details.isJitDumpMethod() &&
       !optimizationPlan->isGPUCompilation())
       {
       // Release the compilation lock and return
@@ -5752,7 +5742,7 @@ void *TR::CompilationInfo::compileOnSeparateThread(J9VMThread * vmThread, TR::Il
          (
             getPersistentInfo()->getDisableFurtherCompilation() &&
             oldStartPC == 0 &&
-            !details.isDumpMethod()
+            !details.isJitDumpMethod()
          )
       )
       {
@@ -6587,7 +6577,7 @@ TR::CompilationInfoPerThreadBase::installAotCachedMethod(
             TR_VerboseLog::write(" time=%dus", (uint32_t)reloTime);
             }
          if (entry)
-            TR_VerboseLog::write(" compThread=%d", getCompThreadId());
+            TR_VerboseLog::write(" compThreadID=%d", getCompThreadId());
 
          TR_VerboseLog::vlogRelease();
          }
@@ -7676,13 +7666,13 @@ TR::CompilationInfoPerThreadBase::compile(J9VMThread * vmThread,
             // inside the compile request. For log compilations, simply return.
             //
             UDATA protectedResult;
-            if (entry->getMethodDetails().isDumpMethod())
+            if (entry->getMethodDetails().isJitDumpMethod())
                {
                // NOTE:
                //       for intentional crashes, intentional traps cause the dump, and we
                //       are not protected against them (flag: J9PORT_SIG_FLAG_SIGTRAP)
                protectedResult = j9sig_protect((j9sig_protected_fn)wrappedCompile, static_cast<void *>(&compParam),
-                                                  (j9sig_handler_fn)  blankDumpSignalHandler, vmThread,
+                                                  (j9sig_handler_fn)  jitDumpSignalHandler, vmThread,
                                                   flags, &result);
                }
             else
@@ -8862,7 +8852,7 @@ TR::CompilationInfoPerThreadBase::compile(
             {
             TR_VerboseLog::writeLineLocked(
                TR_Vlog_COMPSTART,
-               "(%s%s) Compiling %s %s %s j9m=%p t=%llu compThread=%d memLimit=%zu KB freePhysicalMemory=%llu MB",
+               "(%s%s) Compiling %s %s %s j9m=%p t=%llu compThreadID=%d memLimit=%zu KB freePhysicalMemory=%llu MB",
                compilationTypeString,
                compiler->getHotnessName(compiler->getMethodHotness()),
                compiler->signature(),
@@ -8879,7 +8869,7 @@ TR::CompilationInfoPerThreadBase::compile(
             {
             TR_VerboseLog::writeLineLocked(
                TR_Vlog_COMPSTART,
-               "(%s%s) Compiling %s %s %s j9m=%p t=%llu compThread=%d memLimit=%zu KB",
+               "(%s%s) Compiling %s %s %s j9m=%p t=%llu compThreadID=%d memLimit=%zu KB",
                compilationTypeString,
                compiler->getHotnessName(compiler->getMethodHotness()),
                compiler->signature(),
@@ -10393,7 +10383,8 @@ TR::CompilationInfo::compilationEnd(J9VMThread * vmThread, TR::IlGeneratorMethod
          if (TR::Options::getVerboseOption(TR_VerboseJITServer))
             {
             TR_VerboseLog::writeLineLocked(TR_Vlog_JITServer,
-                  "compThreadID=%d has failed to compile", entry->_compInfoPT->getCompThreadId());
+                  "compThreadID=%d has failed to compile: compErrCode %u %s",
+                  entry->_compInfoPT->getCompThreadId(), entry->_compErrCode, comp ? comp->signature() : "");
             }
          static bool breakAfterFailedCompile = feGetEnv("TR_breakAfterFailedCompile") != NULL;
          if (breakAfterFailedCompile)
@@ -10422,7 +10413,8 @@ TR::CompilationInfo::compilationEnd(J9VMThread * vmThread, TR::IlGeneratorMethod
          if (TR::Options::getVerboseOption(TR_VerboseJITServer))
             {
             TR_VerboseLog::writeLineLocked(TR_Vlog_JITServer,
-                  "compThreadID=%d has failed to recompile", entry->_compInfoPT->getCompThreadId());
+                  "compThreadID=%d has failed to recompile: compErrCode %u %s",
+                  entry->_compInfoPT->getCompThreadId(), entry->_compErrCode, comp ? comp->signature() : "");
             }
          int8_t compErrCode = entry->_compErrCode;
          if (compErrCode != compilationStreamInterrupted && compErrCode != compilationStreamFailure)
@@ -10835,7 +10827,7 @@ void TR::CompilationInfoPerThreadBase::logCompilationSuccess(
 
             if (TR::Options::isAnyVerboseOptionSet(TR_VerboseCompileEnd, TR_VerbosePerformance))
                {
-               TR_VerboseLog::write(" compThread=%d",  compiler->getCompThreadID());
+               TR_VerboseLog::write(" compThreadID=%d",  compiler->getCompThreadID());
                }
 
             // print cached cpu usage (sampled elsewhere [samplerThreadProc])
@@ -11141,31 +11133,31 @@ TR::CompilationInfoPerThreadBase::processException(
    catch (const JITServer::StreamFailure &e)
       {
       if (TR::Options::getVerboseOption(TR_VerboseJITServer))
-         TR_VerboseLog::writeLineLocked(TR_Vlog_JITServer, "JITServer StreamFailure: %s", e.what());
+         TR_VerboseLog::writeLineLocked(TR_Vlog_JITServer, "compThreadID=%d JITServer StreamFailure: %s", getCompThreadId(), e.what());
       _methodBeingCompiled->_compErrCode = compilationStreamFailure;
       }
    catch (const JITServer::StreamInterrupted &e)
       {
       if (TR::Options::getVerboseOption(TR_VerboseJITServer))
-         TR_VerboseLog::writeLineLocked(TR_Vlog_JITServer, "JITServer StreamInterrupted: %s", e.what());
+         TR_VerboseLog::writeLineLocked(TR_Vlog_JITServer, "compThreadID=%d JITServer StreamInterrupted: %s", getCompThreadId(), e.what());
       _methodBeingCompiled->_compErrCode = compilationStreamInterrupted;
       }
    catch (const JITServer::StreamVersionIncompatible &e)
       {
       if (TR::Options::getVerboseOption(TR_VerboseJITServer))
-         TR_VerboseLog::writeLineLocked(TR_Vlog_JITServer, "JITServer StreamVersionIncompatible: %s", e.what());
+         TR_VerboseLog::writeLineLocked(TR_Vlog_JITServer, "compThreadID=%d JITServer StreamVersionIncompatible: %s", getCompThreadId(), e.what());
       _methodBeingCompiled->_compErrCode = compilationStreamVersionIncompatible;
       }
    catch (const JITServer::StreamMessageTypeMismatch &e)
       {
       if (TR::Options::getVerboseOption(TR_VerboseJITServer))
-         TR_VerboseLog::writeLineLocked(TR_Vlog_JITServer, "JITServer StreamMessageTypeMismatch: %s", e.what());
+         TR_VerboseLog::writeLineLocked(TR_Vlog_JITServer, "compThreadID=%d JITServer StreamMessageTypeMismatch: %s", getCompThreadId(), e.what());
       _methodBeingCompiled->_compErrCode = compilationStreamMessageTypeMismatch;
       }
    catch (const JITServer::ServerCompilationFailure &e)
       {
       // no need to set error code here because error code is set
-      // in remoteCompile when the compilation failed
+      // in remoteCompile at JITClient when the compilation failed.
       }
 #endif /* defined(J9VM_OPT_JITSERVER) */
    catch (...)
@@ -11225,7 +11217,8 @@ TR::CompilationInfoPerThreadBase::processExceptionCommonTasks(
       else
          {
          uintptr_t translationTime = j9time_usec_clock() - getTimeWhenCompStarted(); //get the time it took to fail the compilation
-         TR_VerboseLog::writeLine(TR_Vlog_COMPFAIL,"%s time=%dus %s <TRANSLATION FAILURE: out of scratch memory>",
+         TR_VerboseLog::writeLine(TR_Vlog_COMPFAIL,"compThreadID=%d %s time=%dus <TRANSLATION FAILURE: %s>",
+                                        compiler->getCompThreadID(),
                                         compiler->signature(),
                                         translationTime,
                                         exceptionName);

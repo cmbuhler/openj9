@@ -51,6 +51,7 @@
 #include "codegen/PrivateLinkage.hpp"
 #include "control/CompilationRuntime.hpp"
 #include "control/CompilationThread.hpp"
+#include "control/JitDump.hpp"
 #include "control/Recompilation.hpp"
 #include "control/RecompilationInfo.hpp"
 #include "runtime/ArtifactManager.hpp"
@@ -127,10 +128,6 @@ extern TR_Processor portLibCall_getProcessorType();
 extern "C" {
 struct J9RASdumpContext;
 }
-
-#ifdef J9VM_RAS_DUMP_AGENTS
-extern "C" intptr_t dumpJitInfo(J9VMThread * currentThread, char *label, J9RASdumpContext *context);
-#endif
 
 #if defined(TR_TARGET_X86) && defined(TR_HOST_32BIT)
 extern TR_X86CPUIDBuffer *queryX86TargetCPUID(void * javaVM);
@@ -636,9 +633,22 @@ freeJITConfig(J9JITConfig * jitConfig)
 extern "C" void
 jitExclusiveVMShutdownPending(J9VMThread * vmThread)
    {
-   #ifndef SMALL_APPTHREAD
-      getCompilationInfo(vmThread->javaVM->jitConfig)->stopCompilationThreads();
-   #endif
+#ifndef SMALL_APPTHREAD
+   J9JavaVM *javaVM = vmThread->javaVM;
+#if defined(J9VM_OPT_JITSERVER)
+   TR::CompilationInfo * compInfo = getCompilationInfo(javaVM->jitConfig);
+   if (compInfo->getPersistentInfo()->getRemoteCompilationMode() == JITServer::SERVER)
+      {
+      TR_Listener *listener = ((TR_JitPrivateConfig*)(javaVM->jitConfig->privateConfig))->listener;
+      if (listener)
+         {
+         listener->stop();
+         }
+      }
+#endif /* defined(J9VM_OPT_JITSERVER) */
+
+   getCompilationInfo(javaVM->jitConfig)->stopCompilationThreads();
+#endif
    }
 
 // Code cache callbacks to be used by the VM
@@ -1305,8 +1315,14 @@ onLoadInternal(
       numCodeCachesToCreateAtStartup = 4;
 #endif
 
-   if (!persistentMemory->getPersistentInfo()->getRuntimeAssumptionTable()->init())
-      return -1;
+
+#if defined(J9VM_OPT_JITSERVER)
+   if (persistentMemory->getPersistentInfo()->getRemoteCompilationMode() != JITServer::SERVER)
+#endif
+      {
+      if (!persistentMemory->getPersistentInfo()->getRuntimeAssumptionTable()->init())
+         return -1;
+      }
 
    TR_PersistentClassLoaderTable *loaderTable = new (PERSISTENT_NEW) TR_PersistentClassLoaderTable(persistentMemory);
    if (loaderTable == NULL)
@@ -1731,11 +1747,6 @@ onLoadInternal(
 #endif
 
 #if defined(TR_HOST_ARM64)
-   // DLT support is not available in AArch64 yet.
-   // OpenJ9 issue #5917 tracks the work to enable.
-   //
-   TR::Options::getCmdLineOptions()->setOption(TR_DisableDynamicLoopTransfer);
-
    // ArrayCopy transformations are not available in AArch64 yet.
    // OpenJ9 issue #6438 tracks the work to enable.
    //
@@ -1845,6 +1856,7 @@ aboutToBootstrap(J9JavaVM * javaVM, J9JITConfig * jitConfig)
 
    J9VMThread *curThread = javaVM->internalVMFunctions->currentVMThread(javaVM);
    TR_J9VMBase *vm = TR_J9VMBase::get(jitConfig, curThread);
+   TR::CompilationInfo * compInfo = TR::CompilationInfo::get(jitConfig);
 
    /* Initialize helpers */
    codert_init_helpers_and_targets(jitConfig, TR::Compiler->target.isSMP());
@@ -1852,10 +1864,14 @@ aboutToBootstrap(J9JavaVM * javaVM, J9JITConfig * jitConfig)
    if (vm->isAOT_DEPRECATED_DO_NOT_USE() || (jitConfig->runtimeFlags & J9JIT_TOSS_CODE))
       return 0;
 
-   /* jit specific helpers */
-   initializeJitRuntimeHelperTable(TR::Compiler->target.isSMP());
 
-   TR::CompilationInfo * compInfo = TR::CompilationInfo::get(jitConfig);
+#if defined(J9VM_OPT_JITSERVER)
+   if (compInfo->getPersistentInfo()->getRemoteCompilationMode() != JITServer::SERVER)
+#endif
+      {
+      /* jit specific helpers */
+      initializeJitRuntimeHelperTable(TR::Compiler->target.isSMP());
+      }
 
 #if defined(TR_TARGET_POWER)
    if (TR::Compiler->target.cpu.isPower())

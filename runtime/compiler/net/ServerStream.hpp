@@ -26,7 +26,9 @@
 #include "net/RawTypeConvert.hpp"
 #include "net/CommunicationStream.hpp"
 #include "env/VerboseLog.hpp"
+#include "control/CompilationThread.hpp" // for TR::compInfoPT->getCompThreadId()
 #include "control/Options.hpp"
+#include "runtime/JITClientSession.hpp"
 #include <openssl/ssl.h>
 
 class SSLOutputStream;
@@ -34,7 +36,6 @@ class SSLInputStream;
 
 namespace JITServer
 {
-class BaseCompileDispatcher;
 
 /**
    @class ServerStream
@@ -47,7 +48,7 @@ class BaseCompileDispatcher;
    2) Create a dedicated thread that will listen for incoming connection requests
    3) In this thread, instantiate a CompileDispatcher from a class defined in step (1)
       E.g.:    J9CompileDispatcher handler(jitConfig);
-   4) Call  "ServerStream::serveRemoteCompilationRequests(&handler, persistentInfo);"
+   4) Call  "TR_Listener::serveRemoteCompilationRequests(&handler);"
       which will wait for a connection, accept the connection, create a ServerStream and call
       handler->compile(stream) for further processing, e.g. add the stream
       to a compilation queue
@@ -74,17 +75,30 @@ public:
    virtual ~ServerStream()
       {
       _numConnectionsClosed++;
+      _pClientSessionData = NULL;
       }
 
    /**
       @brief Send a message to the client
 
       @param [in] type Message type to be sent
-      @param [in] args Variable number of additional paramaters to be sent
+      @param [in] args Variable number of additional parameters to be sent
    */
    template <typename ...Args>
    void write(MessageType type, Args... args)
       {
+      if (isReadingClassUnload() &&
+          isClassUnloadingAttempted() &&
+          (MessageType::compilationFailure != type) &&
+          (MessageType::compilationCode != type))
+         {
+         if (TR::Options::getVerboseOption(TR_VerboseJITServer))
+            TR_VerboseLog::writeLineLocked(TR_Vlog_JITServer, "compThreadID=%d MessageType[%u] %s: throw TR::CompilationInterrupted",
+               TR::compInfoPT->getCompThreadId(), type, messageNames[type]);
+
+         throw TR::CompilationInterrupted();
+         }
+
       _sMsg.setType(type);
       setArgsRaw<Args...>(_sMsg, args...);
       writeMessage(_sMsg);
@@ -208,7 +222,8 @@ public:
       try
          {
          if (TR::Options::getVerboseOption(TR_VerboseJITServer))
-            TR_VerboseLog::writeLineLocked(TR_Vlog_JITServer, "MessageType::compilationFailure: statusCode %u", statusCode);
+            TR_VerboseLog::writeLineLocked(TR_Vlog_JITServer, "compThreadID=%d MessageType::compilationFailure: statusCode %u",
+                  TR::compInfoPT->getCompThreadId(), statusCode);
          write(MessageType::compilationFailure, statusCode);
          }
       catch (std::exception &e)
@@ -227,21 +242,20 @@ public:
       return _clientId;
       }
 
-   /**
-      @brief Function called to deal with incoming connection requests
+   void setClientData(ClientSessionData *pClientData)
+      {
+      _pClientSessionData = pClientData;
+      }
 
-      This function opens a socket, binds it and then waits for incoming connection
-      requests by using `accept()` in an infinite loop. Once a connection is accepted
-      a ServerStream object is created (receiving the newly opened socket descriptor as
-      a parameter) and passed to the compilation handler. Typically, the compilation
-      handler places the ServerStream object in a queue and returns immediately so that
-      other connection requests can be accepted.
-      Note: because the function does not return, it must be executed on a separate thread.
+   volatile bool isReadingClassUnload()
+      {
+      return (_pClientSessionData) ? _pClientSessionData->isReadingClassUnload() : false;
+      }
 
-      @param [in] compiler Object that defines the behavior when a new connection is accepted
-      @param [in] info Pointer to PersistentInfo which contains the port and the timeout value for the connection
-   */
-   static void serveRemoteCompilationRequests(BaseCompileDispatcher *compiler, TR::PersistentInfo *info);
+   volatile bool isClassUnloadingAttempted()
+      {
+      return (_pClientSessionData) ? _pClientSessionData->isClassUnloadingAttempted() : false;
+      }
 
    // Statistics
    static int getNumConnectionsOpened() { return _numConnectionsOpened; }
@@ -251,22 +265,9 @@ private:
    static int _numConnectionsOpened;
    static int _numConnectionsClosed;
    uint64_t _clientId;  // UID of client connected to this communication stream
+   ClientSessionData *_pClientSessionData;
    };
 
-
-/**
-   @class BaseCompileDispatcher
-   @brief Abstract class defining the interface for the compilation handler
-
-   Typically, an user would derive this class and provide an implementation for "compile()"
-   An instance of the derived class needs to be passed to serveRemoteCompilationRequests 
-   which internally calls "compile()"
- */
-class BaseCompileDispatcher
-   {
-public:
-   virtual void compile(ServerStream *stream) = 0;
-   };
 
 }
 

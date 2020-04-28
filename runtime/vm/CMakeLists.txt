@@ -21,12 +21,13 @@
 ################################################################################
 
 omr_add_tracegen(j9vm.tdf)
-add_library(j9vm SHARED
+j9vm_add_library(j9vm SHARED
 	annsup.c
 	AsyncMessageHandler.cpp
 	bchelper.c
 	bindnatv.cpp
-	BytecodeInterpreter.cpp
+	BytecodeInterpreterFull.cpp
+	BytecodeInterpreterCompressed.cpp
 	callin.cpp
 	classallocation.c
 	ClassInitialization.cpp
@@ -34,7 +35,8 @@ add_library(j9vm SHARED
 	classseg.c
 	classsupport.c
 	createramclass.cpp
-	DebugBytecodeInterpreter.cpp
+	DebugBytecodeInterpreterFull.cpp
+	DebugBytecodeInterpreterCompressed.cpp
 	description.c
 	dllsup.c
 	drophelp.c
@@ -108,7 +110,7 @@ add_library(j9vm SHARED
 	threadhelp.cpp
 	threadpark.c
 	throwexception.c
-	valueTypeHelpers.cpp
+	ValueTypeHelpers.cpp
 	visible.c
 	VMAccess.cpp
 	vmbootlib.c
@@ -125,6 +127,17 @@ add_library(j9vm SHARED
 	${CMAKE_CURRENT_BINARY_DIR}/ut_j9vm.c
 )
 
+
+# JIT helper methods require us to disable buffer security checks on Windows
+# See https://github.com/eclipse/openj9/pull/1494 for rationale
+if(OMR_OS_WINDOWS AND (OMR_TOOLCONFIG STREQUAL "msvc"))
+	set_property(
+		SOURCE
+			cnathelp.cpp
+			SharedService.c
+		APPEND PROPERTY COMPILE_FLAGS "/GS-"
+	)
+endif()
 
 if(OMR_ARCH_X86)
 	j9vm_gen_asm(xcinterp.m4)

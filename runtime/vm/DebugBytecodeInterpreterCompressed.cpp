@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 1991, 2014 IBM Corp. and others
+ * Copyright (c) 1991, 2020 IBM Corp. and others
  *
  * This program and the accompanying materials are made available under
  * the terms of the Eclipse Public License 2.0 which accompanies this
@@ -20,16 +20,14 @@
  * SPDX-License-Identifier: EPL-2.0 OR Apache-2.0 OR GPL-2.0 WITH Classpath-exception-2.0 OR LicenseRef-GPL-2.0 WITH Assembly-exception
  *******************************************************************************/
 
-#include "omrthread.h"
-#include "j9protos.h"
-#include "util_internal.h"
+#include "j9cfg.h"
 
-IDATA
-callThreadSleep(IDATA sleepTime)
-{
-	return omrthread_sleep(sleepTime);
-}
-
-
-
-
+#if defined(OMR_GC_COMPRESSED_POINTERS)
+#define DEBUG_VERSION
+#define J9_OVERRIDE_COMPRESS_OBJECT_REFERENCES 1
+#define LOOP_NAME debugBytecodeLoopCompressed
+#define INTERPRETER_CLASS VM_DebugBytecodeInterpreterCompressed
+#include "BytecodeInterpreter.inc"
+#else
+#define LOOP_NAME 0
+#endif /* OMR_GC_COMPRESSED_POINTERS */

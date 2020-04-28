@@ -78,6 +78,9 @@ This folder contains Jenkins pipeline scripts that are used in the OpenJ9 Jenkin
     - OSX on x86-64
         - Spec: x86-64_mac
         - Shortname: osx
+    - OSX on x86-64 with CMake
+        - Spec: x86-64_mac_cm
+        - Shortname: osxcm or osxcmake
     - OSX on x86-64 largeheap/non-compressed references
         - Spec: x86-64_mac_xl
         - Shortname: osxlargeheap or osxxl
@@ -132,6 +135,12 @@ You can request a Pull Request build from the Eclipse OpenJ9 repository - [openj
     - `Jenkins test sanity zlinux jdk8 depends eclipse/omr#123`
 
 ###### Note: When specifying a dependent change in an OpenJDK extensions repo, you can only build the SDK version that matches the repo where the dependent change lives. Eg. You cannot build JDK8 with a PR in openj9-openjdk-jdk11.
+
+##### Building Release branch PRs
+
+- If you have a PR against a release branch, it can be tested with a PR build that specifies the OMR and Extensions repos.
+- Ex. Release PR against the `v0.20.0-release` branch specifying both OMR and Extensions
+    - `Jenkins compile plinux jdk11 depends eclipse/openj9-omr#v0.20.0-release ibmruntimes/openj9-openjdk-jdk11#openj9-0.20.0`
 
 ##### Testing Changes to Pipeline code
 

@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2000, 2018 IBM Corp. and others
+ * Copyright (c) 2000, 2020 IBM Corp. and others
  *
  * This program and the accompanying materials are made available under
  * the terms of the Eclipse Public License 2.0 which accompanies this
@@ -30,6 +30,9 @@
 #include "env/VMJ9.h"
 #include "runtime/IProfiler.hpp"
 #include "runtime/J9Profiler.hpp"
+#if defined(J9VM_OPT_JITSERVER)
+#include "runtime/Listener.hpp"
+#endif /* J9VM_OPT_JITSERVER */
 #include "runtime/codertinit.hpp"
 #include "rossa.h"
 
@@ -589,6 +592,16 @@ IDATA J9VMDllMain(J9JavaVM* vm, IDATA stage, void * reserved)
                TR_J9VMBase *trvm = TR_J9VMBase::get(vm->jitConfig, 0);
                if (!trvm->isAOT_DEPRECATED_DO_NOT_USE() && trvm->_compInfo)
                   {
+#if defined(J9VM_OPT_JITSERVER)
+                  if (trvm->_compInfo->getPersistentInfo()->getRemoteCompilationMode() == JITServer::SERVER)
+                     {
+                     TR_Listener *listener = ((TR_JitPrivateConfig*)(vm->jitConfig->privateConfig))->listener;
+                     if (listener)
+                        {
+                        listener->stop();
+                        }
+                     }
+#endif /* defined(J9VM_OPT_JITSERVER) */
                   trvm->_compInfo->stopCompilationThreads();
                   }
                JitShutdown(vm->jitConfig);

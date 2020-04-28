@@ -20,10 +20,11 @@
  * SPDX-License-Identifier: EPL-2.0 OR Apache-2.0 OR GPL-2.0 WITH Classpath-exception-2.0 OR LicenseRef-GPL-2.0 WITH Assembly-exception
  *******************************************************************************/
 
+#include "ValueTypeHelpers.hpp"
+
 #include "j9.h"
 #include "ut_j9vm.h"
 #include "ObjectAccessBarrierAPI.hpp"
-#include "valueTypeHelpers.hpp"
 
 extern "C" {
 void
@@ -59,25 +60,7 @@ defaultValueWithUnflattenedFlattenables(J9VMThread *currentThread, J9Class *claz
 BOOLEAN
 valueTypeCapableAcmp(J9VMThread *currentThread, j9object_t lhs, j9object_t rhs)
 {
-#if defined(J9VM_OPT_VALHALLA_VALUE_TYPES)
-		bool acmpResult = false;
-		if (rhs == lhs) {
-			acmpResult = true;
-		} else {
-			if ((NULL != rhs) && (NULL != lhs)) {
-				J9Class * lhsClass = J9OBJECT_CLAZZ(_currentThread, lhs);
-				J9Class * rhsClass = J9OBJECT_CLAZZ(_currentThread, rhs);
-				if ((J9_IS_J9CLASS_VALUETYPE(rhsClass)
-					&& J9_IS_J9CLASS_VALUETYPE(lhsClass))
-					&& (rhsClass == lhsClass)
-				) {
-					acmpResult = ValueTypeHelpers::isSubstitutable(currentThread, lhs, rhs, J9VMTHREAD_OBJECT_HEADER_SIZE(_currentThread), lhsClass);
-				}
-			}
-		}
-		return acmpResult;
-#else /* J9VM_OPT_VALHALLA_VALUE_TYPES */
-		return (rhs == lhs);
-#endif /* J9VM_OPT_VALHALLA_VALUE_TYPES */
+	MM_ObjectAccessBarrierAPI objectAccessBarrier(currentThread);
+	return VM_ValueTypeHelpers::acmp(currentThread, objectAccessBarrier, lhs, rhs);
 }
 } /* extern "C" */

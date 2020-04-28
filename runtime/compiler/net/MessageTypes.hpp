@@ -32,7 +32,7 @@ enum MessageType : uint16_t
    compilationFailure,
    mirrorResolvedJ9Method,
    get_params_to_construct_TR_j9method,
-   getUnloadedClassRanges,
+   getUnloadedClassRangesAndCHTable,
    compilationRequest, // type used when client sends remote compilation requests
    compilationInterrupted, // type used when client informs the server to abort the remote compilation
    clientSessionTerminate, // type used when client process is about to terminate
@@ -97,7 +97,6 @@ enum MessageType : uint16_t
    ResolvedMethod_definingClassFromCPFieldRef,
 
    ResolvedRelocatableMethod_createResolvedRelocatableJ9Method,
-   ResolvedRelocatableMethod_storeValidationRecordIfNecessary,
    ResolvedRelocatableMethod_fieldAttributes,
    ResolvedRelocatableMethod_staticAttributes,
    ResolvedRelocatableMethod_getFieldType,
@@ -305,7 +304,7 @@ static const char *messageNames[MessageType_ARRAYSIZE] =
    "compilationFailure", // 1
    "mirrorResolvedJ9Method", // 2
    "get_params_to_construct_TR_j9method", // 3
-   "getUnloadedClassRanges", // 4
+   "getUnloadedClassRangesAndCHTable", // 4
    "compilationRequest", // 5
    "compilationInterrupted", // 6
    "clientSessionTerminate", // 7
@@ -367,7 +366,6 @@ static const char *messageNames[MessageType_ARRAYSIZE] =
    "ResolvedMethod_dynamicConstant", // 63
    "ResolvedMethod_definingClassFromCPFieldRef", // 64
    "ResolvedRelocatableMethod_createResolvedRelocatableJ9Method", // 65
-   "ResolvedRelocatableMethod_storeValidationRecordIfNecessary", // 66
    "ResolvedRelocatableMethod_fieldAttributes", // 67
    "ResolvedRelocatableMethod_staticAttributes", // 68
    "ResolvedRelocatableMethod_getFieldType", // 69

@@ -54,8 +54,8 @@ artifactory:
     osu: 'ci-eclipse-openj9'
     #unb: 'ci-eclipse-openj9-unb' TEMP DISABLE. See #8817
   repo: 'ci-eclipse-openj9'
+  # if numArtifacts not set, use build_discarder
   numArtifacts:
-    osu: 30
     unb: 5
   daysToKeepArtifacts:
     osu: 50
@@ -84,12 +84,12 @@ slack_channel: '#jenkins'
 build_discarder:
   logs:
     Nightly: 40
-    Release: 10
-    OMR: 20
-    OpenJDK8: 20
-    OpenJDK11: 20
-    OpenJDK14: 20
-    OpenJDK: 20
+    Release: 5
+    OMR: 15
+    OpenJDK8: 10
+    OpenJDK11: 10
+    OpenJDK14: 10
+    OpenJDK: 10
     Personal: 50
     Pipeline: 100
 restart_timeout:
@@ -132,7 +132,7 @@ jitserver:
 # OpenSSL
 #========================================#
 openssl:
-  extra_getsource_options: '--openssl-version=1.1.1f'
+  extra_getsource_options: '--openssl-version=1.1.1g'
   extra_configure_options: '--with-openssl=fetched'
 #========================================#
 # OpenSSL Bundling
@@ -175,18 +175,17 @@ ppc64le_linux:
     8: '/usr/lib/jvm/adoptojdk-java-80'
     11: '/usr/lib/jvm/adoptojdk-java-11'
     14: '/usr/lib/jvm/adoptojdk-java-13'
-    next: '/usr/lib/jvm/adoptojdk-java-13'
+    next: '/usr/lib/jvm/adoptojdk-java-14'
   release:
     all: 'linux-ppc64le-server-release'
     8: 'linux-ppc64le-normal-server-release'
     11: 'linux-ppc64le-normal-server-release'
   node_labels:
-    build: 'ci.role.build && hw.arch.ppc64le && sw.os.ubuntu'
+    build: 'ci.role.build && hw.arch.ppc64le && sw.os.cent.7'
   extra_configure_options:
-    8: '--enable-jitserver'
-    11: '--enable-jitserver'
+    all: '--enable-jitserver'
   build_env:
-    vars: 'PATH+GCC7=/usr/local/gcc-7.5.0/bin LD_LIBRARY_PATH=/usr/local/gcc-7.5.0/lib64:$LD_LIBRARY_PATH'
+    cmd: 'source /home/jenkins/set_gcc7.5.0_env'
 #========================================#
 # Linux PPCLE 64bits Compressed Pointers /w cmake
 #========================================#
@@ -199,10 +198,8 @@ ppc64le_linux_xl:
   extends: ['ppc64le_linux', 'largeheap']
   excluded_tests:
     8:
-      - sanity.openjdk
       - special.system
     11:
-      - sanity.openjdk
       - special.system
 #========================================#
 # Linux PPCLE 64bits Compressed Pointers /w JITSERVER
@@ -220,7 +217,7 @@ s390x_linux:
     8: '/usr/lib/jvm/adoptojdk-java-s390x-80'
     11: '/usr/lib/jvm/adoptojdk-java-11'
     14: '/usr/lib/jvm/adoptojdk-java-13'
-    next: '/usr/lib/jvm/adoptojdk-java-13'
+    next: '/usr/lib/jvm/adoptojdk-java-14'
   release:
     all: 'linux-s390x-server-release'
     8: 'linux-s390x-normal-server-release'
@@ -237,10 +234,7 @@ s390x_linux:
 s390x_linux_xl:
   extends: ['s390x_linux', 'largeheap']
   excluded_tests:
-    8:
-      - sanity.openjdk
-    11:
-      - sanity.openjdk
+     11:
       - special.system
 #========================================#
 # Linux S390 64bits Compressed Pointers /w JITSERVER
@@ -253,10 +247,10 @@ s390x_linux_jit:
 ppc64_aix:
   extends: ['debuginfo', 'freemarker', 'openjdk_reference_repo', 'openssl']
   boot_jdk:
-    8: '/usr/java7'
-    11: '/usr/java11_64'
-    14: '/usr/java13_64'
-    next: '/usr/java13_64'
+    8: '/opt/java7'
+    11: '/opt/java11_64'
+    14: '/opt/java13_64'
+    next: '/opt/java14_64'
   release:
     all: 'aix-ppc64-server-release'
     8: 'aix-ppc64-normal-server-release'
@@ -275,12 +269,6 @@ ppc64_aix:
       11: 'PATH+XLC=/opt/IBM/xlC/13.1.3/bin:/opt/IBM/xlc/13.1.3/bin'
       14: 'PATH+XLC=/opt/IBM/xlC/16.1.0/bin:/opt/IBM/xlc/16.1.0/bin CC=xlclang CXX=xlclang++'
       next: 'PATH+XLC=/opt/IBM/xlC/16.1.0/bin:/opt/IBM/xlc/16.1.0/bin CC=xlclang CXX=xlclang++'
-  excluded_tests:
-    8:
-      - sanity.openjdk
-    11:
-      - sanity.openjdk
-      - special.system
 #========================================#
 # Linux x86 64bits Compressed Pointers
 #========================================#
@@ -290,7 +278,7 @@ x86-64_linux:
     8: '/usr/lib/jvm/jdk-7'
     11: '/usr/lib/jvm/jdk-11'
     14: '/usr/lib/jvm/adoptojdk-java-13'
-    next: '/usr/lib/jvm/adoptojdk-java-13'
+    next: '/usr/lib/jvm/adoptojdk-java-14'
   release:
     all: 'linux-x86_64-server-release'
     8: 'linux-x86_64-normal-server-release'
@@ -298,8 +286,7 @@ x86-64_linux:
   node_labels:
     build: 'ci.role.build && hw.arch.x86 && sw.os.cent.6'
   extra_configure_options:
-    8: '--enable-jitserver'
-    11: '--enable-jitserver'
+    all: '--enable-jitserver'
   build_env:
     cmd: 'source /home/jenkins/set_gcc7.5.0_env'
     vars: 'OPENJ9_JAVA_OPTIONS=-Xdump:system+java:events=systhrow,filter=java/lang/ClassCastException,request=exclusive+prepwalk+preempt'
@@ -323,10 +310,7 @@ x86-64_linux_xl:
   extends: ['x86-64_linux', 'largeheap']
   excluded_tests:
     8:
-      - sanity.openjdk
       - special.system
-    11:
-      - sanity.openjdk
 #========================================#
 # Linux x86 64bits Compressed Pointers / Valhalla
 #========================================#
@@ -344,6 +328,8 @@ aarch64_linux:
   node_labels:
     build:
       11: 'ci.role.build && hw.arch.aarch64 && sw.os.cent.7'
+  build_env:
+    vars: 'PATH+TOOLS=/usr/local/gcc-7.5.0/bin'
 #========================================#
 # Linux Aarch 64bits Large Heap
 #========================================#
@@ -358,7 +344,7 @@ x86-64_windows:
     8: '/cygdrive/c/openjdk/jdk7'
     11: '/cygdrive/c/openjdk/jdk11'
     14: '/cygdrive/c/openjdk/jdk13'
-    next: '/cygdrive/c/openjdk/jdk13'
+    next: '/cygdrive/c/openjdk/jdk14'
   release:
     all: 'windows-x86_64-server-release'
     8: 'windows-x86_64-normal-server-release'
@@ -366,19 +352,16 @@ x86-64_windows:
   freemarker: '/cygdrive/c/openjdk/freemarker.jar'
   extra_configure_options:
     all: '--disable-ccache --with-cuda="C:/Program Files/NVIDIA GPU Computing Toolkit/CUDA/v9.0"'
-    8: '--with-freetype-include=/cygdrive/c/openjdk/freetype-2.5.3/include --with-freetype-lib=/cygdrive/c/openjdk/freetype-2.5.3/lib64 --with-openssl=/cygdrive/c/openjdk/OpenSSL-1.1.1e-x86_64-VS2013'
-    11: '--with-toolchain-version=2017 --with-openssl=/cygdrive/c/openjdk/OpenSSL-1.1.1e-x86_64-VS2017'
-    14: '--with-toolchain-version=2017 --with-openssl=/cygdrive/c/openjdk/OpenSSL-1.1.1e-x86_64-VS2017'
-    next: '--with-toolchain-version=2017 --with-openssl=/cygdrive/c/openjdk/OpenSSL-1.1.1e-x86_64-VS2017'
+    8: '--with-freetype-include=/cygdrive/c/openjdk/freetype-2.5.3/include --with-freetype-lib=/cygdrive/c/openjdk/freetype-2.5.3/lib64 --with-openssl=/cygdrive/c/openjdk/OpenSSL-1.1.1g-x86_64-VS2013'
+    11: '--with-toolchain-version=2017 --with-openssl=/cygdrive/c/openjdk/OpenSSL-1.1.1g-x86_64-VS2017'
+    14: '--with-toolchain-version=2017 --with-openssl=/cygdrive/c/openjdk/OpenSSL-1.1.1g-x86_64-VS2017'
+    next: '--with-toolchain-version=2017 --with-openssl=/cygdrive/c/openjdk/OpenSSL-1.1.1g-x86_64-VS2017'
   node_labels:
     build: 'ci.role.build && hw.arch.x86 && sw.os.windows'
   build_env:
     vars: 'PATH+TOOLS=/cygdrive/c/openjdk/LLVM64/bin:/cygdrive/c/openjdk/nasm-2.13.03'
   excluded_tests:
-    8:
-      - sanity.openjdk
     11:
-      - sanity.openjdk
       - special.system
 #========================================#
 # Windows x86 64bits Large Heap
@@ -395,7 +378,7 @@ x86-32_windows:
   release:
     8: 'windows-x86-normal-server-release'
   extra_configure_options:
-    8: '--with-freetype-include=/cygdrive/c/openjdk/freetype-2.5.3/include --with-freetype-lib=/cygdrive/c/openjdk/freetype-2.5.3/lib32 --with-target-bits=32 --disable-ccache --with-openssl=/cygdrive/c/openjdk/OpenSSL-1.1.1e-x86_32-VS2013'
+    8: '--with-freetype-include=/cygdrive/c/openjdk/freetype-2.5.3/include --with-freetype-lib=/cygdrive/c/openjdk/freetype-2.5.3/lib32 --with-target-bits=32 --disable-ccache --with-openssl=/cygdrive/c/openjdk/OpenSSL-1.1.1g-x86_32-VS2013'
   freemarker: '/cygdrive/c/openjdk/freemarker.jar'
   node_labels:
     build:
@@ -405,10 +388,7 @@ x86-32_windows:
       8: 'PATH+TOOLS=/cygdrive/c/openjdk/LLVM32/bin:/cygdrive/c/openjdk/nasm-2.13.03'
   excluded_tests:
     8:
-      - sanity.openjdk
       - special.system
-    11:
-      - sanity.openjdk
 #========================================#
 # OSX x86 64bits Compressed Pointers
 #========================================#
@@ -418,7 +398,7 @@ x86-64_mac:
     8: '/Users/jenkins/bootjdks/adoptojdk-java-8'
     11: '/Users/jenkins/bootjdks/adoptojdk-java-11'
     14: '/Users/jenkins/bootjdks/adoptojdk-java-13'
-    next: '/Users/jenkins/bootjdks/adoptojdk-java-13'
+    next: '/Users/jenkins/bootjdks/adoptojdk-java-14'
   release:
     all: 'macosx-x86_64-server-release'
     8: 'macosx-x86_64-normal-server-release'
@@ -436,10 +416,7 @@ x86-64_mac:
       all: 'OPENJ9_JAVA_OPTIONS=-Xdump:system+java:events=systhrow,filter=java/lang/ClassCastException,request=exclusive+prepwalk+preempt'
       8: 'MACOSX_DEPLOYMENT_TARGET=10.9.0 SDKPATH=/Users/jenkins/Xcode4/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX10.8.sdk'
   excluded_tests:
-    8:
-      - sanity.openjdk
     11:
-      - sanity.openjdk
       - special.system
 #========================================#
 # OSX x86 64bits Large Heap
@@ -449,3 +426,8 @@ x86-64_mac_xl:
   excluded_tests:
     8:
       - special.system
+#========================================#
+# OSX x86 64bits Compressed Pointers /w CMake
+#========================================#
+x86-64_mac_cm:
+  extends: ['x86-64_mac', 'cmake']

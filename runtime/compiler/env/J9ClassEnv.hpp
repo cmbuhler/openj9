@@ -43,6 +43,8 @@ namespace J9 { typedef J9::ClassEnv ClassEnvConnector; }
 namespace TR { class SymbolReference; }
 namespace TR { class TypeLayout; }
 namespace TR { class Region; }
+class TR_PersistentClassInfo;
+template <typename ListKind> class List;
 
 namespace J9
 {
@@ -89,6 +91,24 @@ public:
    bool isAbstractClass(TR::Compilation *comp, TR_OpaqueClassBlock *clazzPointer);
    bool isInterfaceClass(TR::Compilation *comp, TR_OpaqueClassBlock *clazzPointer);
    bool isValueTypeClass(TR_OpaqueClassBlock *);
+
+   /**
+    * \brief
+    *    Checks whether instances of the specified class can be trivially initialized by
+    *    "zeroing" their fields.
+    *    In the case of OpenJ9, this tests whether any field is of a value type that has not been
+    *    "flattened" (that is, had the value type's fields inlined into this class).  Such a value
+    *    type field must be initialized with the default value of the type.
+    *
+    * \param clazz
+    *    The class that is to be checked
+    *
+    * \return
+    *    `true` if instances of the specified class can be initialized by zeroing their fields;
+    *    `false` otherwise (that is, if the class has value type fields whose fields have not
+    *    been inlined)
+    */
+   bool isZeroInitializable(TR_OpaqueClassBlock *clazz);
    bool isEnumClass(TR::Compilation *comp, TR_OpaqueClassBlock *clazzPointer, TR_ResolvedMethod *method);
    bool isPrimitiveClass(TR::Compilation *comp, TR_OpaqueClassBlock *clazz);
    bool isAnonymousClass(TR::Compilation *comp, TR_OpaqueClassBlock *clazz);
@@ -151,6 +171,15 @@ public:
    intptr_t getVFTEntry(TR::Compilation *comp, TR_OpaqueClassBlock* clazz, int32_t offset);
    uint8_t *getROMClassRefName(TR::Compilation *comp, TR_OpaqueClassBlock *clazz, uint32_t cpIndex, int &classRefLen);
    J9ROMConstantPoolItem *getROMConstantPool(TR::Compilation *comp, TR_OpaqueClassBlock *clazz);
+
+   /**
+    * @brief Determine if a list of classes contains less than two concrete classes.
+    * A class is considered concrete if it is not an interface or an abstract class
+    * @param subClasses List of subclasses to be checked.
+    * @return Returns 'true' if the given list of classes contains less than 
+    * 2 concrete classses and false otherwise.
+    */
+   bool containsZeroOrOneConcreteClass(TR::Compilation *comp, List<TR_PersistentClassInfo>* subClasses);
    };
 
 }

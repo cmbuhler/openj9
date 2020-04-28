@@ -4043,7 +4043,7 @@ TR_J9VMBase::methodMayHaveBeenInterpreted(TR::Compilation *comp)
 bool
 TR_J9VMBase::canRecompileMethodWithMatchingPersistentMethodInfo(TR::Compilation *comp)
    {
-   return (comp->ilGenRequest().details().isDumpMethod() || // for a log recompilation, it's okay to compile at the same level
+   return (comp->ilGenRequest().details().isJitDumpMethod() || // for a log recompilation, it's okay to compile at the same level
            comp->getOption(TR_EnableHCR)
           );                     // TODO: Why does this assume sometimes fail in HCR mode?
    }
@@ -5973,8 +5973,10 @@ TR_J9VMBase::canAllocateInlineClass(TR_OpaqueClassBlock *clazzOffset)
    if (clazz->initializeStatus != 1)
       return false;
 
-   // Can not inline the allocation if the class is an interface or abstract
-   if (clazz->romClass->modifiers & (J9AccAbstract | J9AccInterface))
+   // Can not inline the allocation if the class is an interface, abstract or identityless
+   // (a value type) or if it is a class with identityless fields
+   if ((clazz->romClass->modifiers & (J9AccAbstract | J9AccInterface | J9AccValueType))
+       || (clazz->classFlags & J9ClassContainsUnflattenedFlattenables))
       return false;
    return true;
    }
@@ -8349,28 +8351,6 @@ J9ROMMethod *
 TR_J9VM::getROMMethodFromRAMMethod(J9Method *ramMethod)
    {
    return J9_ROM_METHOD_FROM_RAM_METHOD(ramMethod);
-   }
-
-bool 
-TR_J9VM::noMultipleConcreteClasses(List<TR_PersistentClassInfo>* subClasses)
-   {
-   TR::Compilation *comp = _compInfoPT->getCompilation();
-   int count = 0;
-   ListIterator<TR_PersistentClassInfo> i(subClasses);
-   for (TR_PersistentClassInfo *ptClassInfo = i.getFirst(); ptClassInfo; ptClassInfo = i.getNext())
-      {
-      TR_OpaqueClassBlock *clazz = ptClassInfo->getClassId();
-      if (!TR::Compiler->cls.isInterfaceClass(comp, clazz) && !TR::Compiler->cls.isAbstractClass(comp, clazz))
-         {
-         count++;
-         }
-      if (count > 1)
-         {
-         return false;
-         }
-      }
-
-   return true;
    }
 
 //////////////////////////////////////////////////////////

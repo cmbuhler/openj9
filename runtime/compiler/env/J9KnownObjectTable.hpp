@@ -86,8 +86,6 @@ public:
    TR::KnownObjectTable *self();
 
    Index getEndIndex();
-   Index getIndex(uintptr_t objectPointer);
-   Index getIndex(uintptr_t objectPointer, bool isArrayWithConstantElements);
    Index getOrCreateIndex(uintptr_t objectPointer);
    Index getOrCreateIndex(uintptr_t objectPointer, bool isArrayWithConstantElements);
    uintptr_t *getPointerLocation(Index index);
@@ -95,8 +93,6 @@ public:
 
    void dumpTo(TR::FILE *file, TR::Compilation *comp);
 
-   Index getIndexAt(uintptr_t *objectReferenceLocation);
-   Index getIndexAt(uintptr_t *objectReferenceLocation, bool isArrayWithConstantElements);
    Index getOrCreateIndexAt(uintptr_t *objectReferenceLocation);
    Index getOrCreateIndexAt(uintptr_t *objectReferenceLocation, bool isArrayWithConstantElements);
    Index getExistingIndexAt(uintptr_t *objectReferenceLocation);
@@ -104,7 +100,7 @@ public:
    uintptr_t getPointer(Index index);
 
 #if defined(J9VM_OPT_JITSERVER)
-   void updateKnownObjectTableAtServer(Index index, uintptr_t *objectReferenceLocation);
+   void updateKnownObjectTableAtServer(Index index, uintptr_t *objectReferenceLocationClient);
    void getKnownObjectTableDumpInfo(std::vector<TR_KnownObjectTableDumpInfo> &knotDumpInfoList);
 #endif /* defined(J9VM_OPT_JITSERVER) */
 

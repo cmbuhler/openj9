@@ -23,6 +23,16 @@
 #if !defined(OBJECTMONITOR_HPP_)
 #define OBJECTMONITOR_HPP_
 
+#include "j9cfg.h"
+
+#if defined(J9_OVERRIDE_COMPRESS_OBJECT_REFERENCES)
+#if J9_OVERRIDE_COMPRESS_OBJECT_REFERENCES
+#define VM_ObjectMonitor VM_ObjectMonitorCompressed
+#else /* J9_OVERRIDE_COMPRESS_OBJECT_REFERENCES */
+#define VM_ObjectMonitor VM_ObjectMonitorFull
+#endif /* J9_OVERRIDE_COMPRESS_OBJECT_REFERENCES */
+#endif /* J9_OVERRIDE_COMPRESS_OBJECT_REFERENCES */
+
 #include "j9.h"
 #include "j9accessbarrier.h"
 #include "j9consts.h"
@@ -249,7 +259,7 @@ done:
 		}
 
 		if (lock == compareAndSwapLockword(currentThread, lockEA, lock, mine, readBeforeCAS)) {
-			VM_AtomicSupport::monitorEnterBarrier();
+			VM_AtomicSupport::readBarrier();
 			locked = true;
 		}
 		return locked;

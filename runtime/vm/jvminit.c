@@ -320,6 +320,17 @@ static UDATA parseGlrOption(J9JavaVM* jvm, char* option);
 J9_DECLARE_CONSTANT_UTF8(j9_int_void, "(I)V");
 J9_DECLARE_CONSTANT_UTF8(j9_dispatch, "dispatch");
 
+/* The appropriate bytecodeLoop is selected based on interpreter mode */
+#if defined(OMR_GC_FULL_POINTERS)
+UDATA bytecodeLoopFull(J9VMThread *currentThread);
+UDATA debugBytecodeLoopFull(J9VMThread *currentThread);
+#endif /* OMR_GC_FULL_POINTERS */
+
+#if defined(OMR_GC_COMPRESSED_POINTERS)
+UDATA bytecodeLoopCompressed(J9VMThread *currentThread);
+UDATA debugBytecodeLoopCompressed(J9VMThread *currentThread);
+#endif /* OMR_GC_COMPRESSED_POINTERS */
+
 #if defined(COUNT_BYTECODE_PAIRS)
 static jint
 initializeBytecodePairs(J9JavaVM *vm)
@@ -2061,7 +2072,7 @@ IDATA VMInitStages(J9JavaVM *vm, IDATA stage, void* reserved) {
 			 */
 			if (J9_ARE_ANY_BITS_SET(vm->vmRuntimeStateListener.idleTuningFlags, J9_IDLE_TUNING_GC_ON_IDLE | J9_IDLE_TUNING_COMPACT_ON_IDLE)) {
 				BOOLEAN idleGCTuningSupported = FALSE;
-#if (defined(LINUX) && (defined(J9HAMMER) || defined(J9X86) || defined(S39064) || defined(PPC64))) || defined(J9ZOS39064)
+#if (defined(LINUX) && (defined(J9HAMMER) || defined(J9X86) || defined(S39064) || defined(PPC64) || defined(RISCV64))) || defined(J9ZOS39064)
 				/* & only for gencon GC policy */
 				if (J9_GC_POLICY_GENCON == ((OMR_VM *)vm->omrVM)->gcPolicy) {
 					idleGCTuningSupported = TRUE;
@@ -2431,9 +2442,27 @@ IDATA VMInitStages(J9JavaVM *vm, IDATA stage, void* reserved) {
 #endif /* J9VM_INTERP_ATOMIC_FREE_JNI_USES_FLUSH */
 			TRIGGER_J9HOOK_VM_ABOUT_TO_BOOTSTRAP(vm->hookInterface, vm->mainThread);
 			/* At this point, the decision about which interpreter to use has been made */
-			vm->bytecodeLoop = J9_ARE_ANY_BITS_SET(vm->extendedRuntimeFlags, J9_EXTENDED_RUNTIME_DEBUG_MODE)
-					? (void*)debugBytecodeLoop
-					: (void*)bytecodeLoop;
+			if (J9_ARE_ANY_BITS_SET(vm->extendedRuntimeFlags, J9_EXTENDED_RUNTIME_DEBUG_MODE)) {
+				if (J9JAVAVM_COMPRESS_OBJECT_REFERENCES(vm)) {
+#if defined(OMR_GC_COMPRESSED_POINTERS)
+					vm->bytecodeLoop = debugBytecodeLoopCompressed;
+#endif /* OMR_GC_COMPRESSED_POINTERS */
+				} else {
+#if defined(OMR_GC_FULL_POINTERS)
+					vm->bytecodeLoop = debugBytecodeLoopFull;
+#endif /* OMR_GC_FULL_POINTERS */
+				}
+			} else {
+				if (J9JAVAVM_COMPRESS_OBJECT_REFERENCES(vm)) {
+#if defined(OMR_GC_COMPRESSED_POINTERS)
+					vm->bytecodeLoop = bytecodeLoopCompressed;
+#endif /* OMR_GC_COMPRESSED_POINTERS */
+				} else {
+#if defined(OMR_GC_FULL_POINTERS)
+					vm->bytecodeLoop = bytecodeLoopFull;
+#endif /* OMR_GC_FULL_POINTERS */
+				}
+			}
 			break;
 
 		case JCL_INITIALIZED :
@@ -2791,6 +2820,14 @@ modifyDllLoadTable(J9JavaVM * vm, J9Pool* loadTable, J9VMInitArgs* j9vm_args)
 			}
 		}
 	}
+
+	/* Temporarily disable JIT/AOT until it is fully implemented */
+#if defined(RISCV64)
+	xint = TRUE;
+	xjit = FALSE;
+	xaot = FALSE;
+	xnoaot = FALSE;
+#endif
 
 	if (xint) {
 		JVMINIT_VERBOSE_INIT_VM_TRACE(vm, "-Xint set\n");
@@ -3194,6 +3231,17 @@ processVMArgsFromFirstToLast(J9JavaVM * vm)
 			vm->extendedRuntimeFlags |= J9_EXTENDED_RUNTIME_DEBUG_MODE;
 		} else if (debugInterpreter < noDebugInterpreter) {
 			vm->extendedRuntimeFlags &= ~(UDATA)J9_EXTENDED_RUNTIME_DEBUG_MODE;
+		}
+	}
+
+	{
+		IDATA enableHugePagesMmap = FIND_AND_CONSUME_ARG(EXACT_MATCH, VMOPT_PORT_VMEM_HUGE_PAGES_MMAP_ENABLED, NULL);
+		IDATA disableHugePagesMmap = FIND_AND_CONSUME_ARG(EXACT_MATCH, VMOPT_PORT_VMEM_HUGE_PAGES_MMAP_DISABLED, NULL);
+		PORT_ACCESS_FROM_JAVAVM(vm);
+		if (enableHugePagesMmap > disableHugePagesMmap) {
+			j9port_control(J9PORT_CTLDATA_VMEM_HUGE_PAGES_MMAP_ENABLED, 1);
+		} else {
+			j9port_control(J9PORT_CTLDATA_VMEM_HUGE_PAGES_MMAP_ENABLED, 0);
 		}
 	}
 
@@ -5888,6 +5936,14 @@ protectedInitializeJavaVM(J9PortLibrary* portLibrary, void * userData)
 	}
 #endif
 
+#if defined(J9VM_OPT_METHOD_HANDLE)
+	/* Enable i2j MethodHandle transitions by default */
+	vm->extendedRuntimeFlags |= J9_EXTENDED_RUNTIME_I2J_MH_TRANSITION_ENABLED;
+#endif
+
+	/* Default to using lazy in all but realtime */
+	vm->extendedRuntimeFlags |= J9_EXTENDED_RUNTIME_LAZY_SYMBOL_RESOLUTION;
+
 	/* Scans cmd-line arguments in order */
 	if (JNI_OK != processVMArgsFromFirstToLast(vm)) {
 		goto error;
@@ -6046,14 +6102,6 @@ protectedInitializeJavaVM(J9PortLibrary* portLibrary, void * userData)
 	if (JNI_OK != modifyDllLoadTable(vm, vm->dllLoadTable, vm->vmArgsArray)) {
 		goto error;
 	}
-	
-#if defined(J9VM_OPT_METHOD_HANDLE)
-	/* Enable i2j MethodHandle transitions by default */
-	vm->extendedRuntimeFlags |= J9_EXTENDED_RUNTIME_I2J_MH_TRANSITION_ENABLED;
-#endif
-
-	/* Default to using lazy in all but realtime */
-	vm->extendedRuntimeFlags |= J9_EXTENDED_RUNTIME_LAZY_SYMBOL_RESOLUTION;
 
 #if !defined(WIN32)
 	if (J9_ARE_ANY_BITS_SET(vm->extendedRuntimeFlags,J9_EXTENDED_RUNTIME_HANDLE_SIGXFSZ)) {

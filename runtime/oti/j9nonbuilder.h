@@ -2242,7 +2242,40 @@ typedef struct J9WalkStackFramesAndSlotsStorage {
 	UDATA* jit_r29;
 	UDATA* jit_r30;
 	UDATA* jit_r31;
-#elif defined(J9VM_ARCH_S390) /* J9VM_ARCH_POWER */
+#elif defined(J9VM_ARCH_RISCV) /* J9VM_ARCH_POWER */
+	UDATA* jit_r0;
+	UDATA* jit_r1;
+	UDATA* jit_r2;
+	UDATA* jit_r3;
+	UDATA* jit_r4;
+	UDATA* jit_r5;
+	UDATA* jit_r6;
+	UDATA* jit_r7;
+	UDATA* jit_r8;
+	UDATA* jit_r9;
+	UDATA* jit_r10;
+	UDATA* jit_r11;
+	UDATA* jit_r12;
+	UDATA* jit_r13;
+	UDATA* jit_r14;
+	UDATA* jit_r15;
+	UDATA* jit_r16;
+	UDATA* jit_r17;
+	UDATA* jit_r18;
+	UDATA* jit_r19;
+	UDATA* jit_r20;
+	UDATA* jit_r21;
+	UDATA* jit_r22;
+	UDATA* jit_r23;
+	UDATA* jit_r24;
+	UDATA* jit_r25;
+	UDATA* jit_r26;
+	UDATA* jit_r27;
+	UDATA* jit_r28;
+	UDATA* jit_r29;
+	UDATA* jit_r30;
+	UDATA* jit_r31;
+#elif defined(J9VM_ARCH_S390) /* J9VM_ARCH_RISCV */
 	UDATA* jit_r0;
 	UDATA* jit_r1;
 	UDATA* jit_r2;
@@ -2511,7 +2544,40 @@ typedef struct J9SFJ2IFrame {
 #if !defined(J9VM_ENV_DATA64)
 	UDATA jit_r15;
 #endif /* !J9VM_ENV_DATA64 */
-#elif defined(J9VM_ARCH_S390) /* J9VM_ARCH_POWER */
+#elif defined(J9VM_ARCH_RISCV) /* J9VM_ARCH_POWER */
+	UDATA jit_r0;
+	UDATA jit_r1;
+	UDATA jit_r2;
+	UDATA jit_r3;
+	UDATA jit_r4;
+	UDATA jit_r5;
+	UDATA jit_r6;
+	UDATA jit_r7;
+	UDATA jit_r8;
+	UDATA jit_r9;
+	UDATA jit_r10;
+	UDATA jit_r11;
+	UDATA jit_r12;
+	UDATA jit_r13;
+	UDATA jit_r14;
+	UDATA jit_r15;
+	UDATA jit_r16;
+	UDATA jit_r17;
+	UDATA jit_r18;
+	UDATA jit_r19;
+	UDATA jit_r20;
+	UDATA jit_r21;
+	UDATA jit_r22;
+	UDATA jit_r23;
+	UDATA jit_r24;
+	UDATA jit_r25;
+	UDATA jit_r26;
+	UDATA jit_r27;
+	UDATA jit_r28;
+	UDATA jit_r29;
+	UDATA jit_r30;
+	UDATA jit_r31;
+#elif defined(J9VM_ARCH_S390) /* J9VM_ARCH_RISCV */
 #if !defined(J9VM_ENV_DATA64)
 	UDATA jit_r28;
 	UDATA jit_r27;
@@ -3486,6 +3552,7 @@ typedef struct J9JITConfig {
 	void *old_slow_jitRetranslateMethod;
 	void *old_slow_jitThrowCurrentException;
 	void *old_slow_jitThrowException;
+	void *old_slow_jitThrowUnreportedException;
 	void *old_slow_jitThrowAbstractMethodError;
 	void *old_slow_jitThrowArithmeticException;
 	void *old_slow_jitThrowArrayIndexOutOfBounds;
@@ -3963,8 +4030,8 @@ typedef struct J9MemoryManagerFunctions {
 	void  ( *J9MetronomeWriteBarrierJ9ClassStore)(struct J9VMThread *vmThread, J9Object *dstObject, J9Object **dstAddress, J9Object *srcObject) ;
 	void  ( *J9ReadBarrier)(struct J9VMThread *vmThread, fj9object_t *srcAddress);
 	void  ( *J9ReadBarrierJ9Class)(struct J9VMThread *vmThread, j9object_t *srcAddress);
-	j9object_t  ( *j9gc_objaccess_monitorTableReadObject)(struct J9VMThread *vmThread, j9object_t *srcAddress);
-	j9object_t  ( *j9gc_objaccess_monitorTableReadObjectVM)(struct J9JavaVM *vm, j9object_t *srcAddress);
+	j9object_t  ( *j9gc_weakRoot_readObject)(struct J9VMThread *vmThread, j9object_t *srcAddress);
+	j9object_t  ( *j9gc_weakRoot_readObjectVM)(struct J9JavaVM *vm, j9object_t *srcAddress);
 	UDATA  ( *j9gc_ext_check_is_valid_heap_object)(struct J9JavaVM *javaVM, j9object_t ptr, UDATA flags) ;
 #if defined(J9VM_GC_FINALIZATION)
 	UDATA  ( *j9gc_get_objects_pending_finalization_count)(struct J9JavaVM* vm) ;
@@ -4082,7 +4149,7 @@ typedef struct J9MemoryManagerFunctions {
 	void  ( *j9mm_get_guaranteed_nursery_range)(struct J9JavaVM* javaVM, void** start, void** end) ;
 	UDATA  ( *j9gc_arraylet_getLeafSize)(struct J9JavaVM* javaVM) ;
 	UDATA  ( *j9gc_arraylet_getLeafLogSize)(struct J9JavaVM* javaVM) ;
-	void  ( *j9gc_set_allocation_sampling_interval)(struct J9VMThread *vmThread, UDATA samplingInterval);
+	void  ( *j9gc_set_allocation_sampling_interval)(struct J9JavaVM *vm, UDATA samplingInterval);
 	void  ( *j9gc_set_allocation_threshold)(struct J9VMThread *vmThread, UDATA low, UDATA high) ;
 	void  ( *j9gc_objaccess_recentlyAllocatedObject)(struct J9VMThread *vmThread, J9Object *dstObject) ;
 	void  ( *j9gc_objaccess_postStoreClassToClassLoader)(struct J9VMThread* vmThread, J9ClassLoader* destClassLoader, J9Class* srcClass) ;
@@ -4711,18 +4778,6 @@ typedef struct J9VMThread {
 #define J9VMTHREAD_SET_BLOCKINGENTEROBJECT(vmThread, object, value) J9VMTHREAD_JAVAVM(vmThread)->memoryManagerFunctions->j9gc_objaccess_storeObjectToInternalVMSlot((vmThread), (j9object_t*)&((object)->blockingEnterObject), (value))
 #define TMP_J9VMTHREAD_BLOCKINGENTEROBJECT(object) ((object)->blockingEnterObject)
 
-#if defined(OMR_GC_COMPRESSED_POINTERS)
-#if defined(OMR_GC_FULL_POINTERS)
-/* Mixed mode - necessarily 64-bit */
-#define J9VMTHREAD_COMPRESS_OBJECT_REFERENCES(vmThread) (0 != (vmThread)->compressObjectReferences)
-#else /* OMR_GC_FULL_POINTERS */
-/* Compressed only - necessarily 64-bit */
-#define J9VMTHREAD_COMPRESS_OBJECT_REFERENCES(vmThread) TRUE
-#endif /* OMR_GC_FULL_POINTERS */
-#else /* OMR_GC_COMPRESSED_POINTERS */
-/* Full only - could be 32 or 64-bit */
-#define J9VMTHREAD_COMPRESS_OBJECT_REFERENCES(vmThread) FALSE
-#endif /* OMR_GC_COMPRESSED_POINTERS */
 #define J9VMTHREAD_REFERENCE_SIZE(vmThread) (J9VMTHREAD_COMPRESS_OBJECT_REFERENCES(vmThread) ? sizeof(U_32) : sizeof(UDATA))
 #define J9VMTHREAD_OBJECT_HEADER_SIZE(vmThread) (J9VMTHREAD_COMPRESS_OBJECT_REFERENCES(vmThread) ? sizeof(J9ObjectCompressed) : sizeof(J9ObjectFull))
 #define J9VMTHREAD_CONTIGUOUS_HEADER_SIZE(vmThread) (J9VMTHREAD_COMPRESS_OBJECT_REFERENCES(vmThread) ? sizeof(J9IndexableObjectContiguousCompressed) : sizeof(J9IndexableObjectContiguousFull))
@@ -4790,7 +4845,7 @@ typedef struct J9JavaVM {
 	omrthread_monitor_t systemPropertiesMutex;
 	U_8* javaHome;
 	void* cInterpreter;
-	void* bytecodeLoop;
+	UDATA (*bytecodeLoop)(struct J9VMThread *currentThread);
 	struct J9CudaGlobals* cudaGlobals;
 	struct J9SharedClassConfig* sharedClassConfig;
 	U_8* bootstrapClassPath;
@@ -5186,18 +5241,6 @@ typedef struct J9JavaVM {
  */
 #define J9_OBJECT_MONITOR_BLOCKING 3
 
-#if defined(OMR_GC_COMPRESSED_POINTERS)
-#if defined(OMR_GC_FULL_POINTERS)
-/* Mixed mode - necessarily 64-bit */
-#define J9JAVAVM_COMPRESS_OBJECT_REFERENCES(vm) J9_ARE_ANY_BITS_SET((vm)->extendedRuntimeFlags2, J9_EXTENDED_RUNTIME2_COMPRESS_OBJECT_REFERENCES)
-#else /* OMR_GC_FULL_POINTERS */
-/* Compressed only - necessarily 64-bit */
-#define J9JAVAVM_COMPRESS_OBJECT_REFERENCES(vm) TRUE
-#endif /* OMR_GC_FULL_POINTERS */
-#else /* OMR_GC_COMPRESSED_POINTERS */
-/* Full only - could be 32 or 64-bit */
-#define J9JAVAVM_COMPRESS_OBJECT_REFERENCES(vm) FALSE
-#endif /* OMR_GC_COMPRESSED_POINTERS */
 #define J9JAVAVM_REFERENCE_SIZE(vm) (J9JAVAVM_COMPRESS_OBJECT_REFERENCES(vm) ? sizeof(U_32) : sizeof(UDATA))
 #define J9JAVAVM_OBJECT_HEADER_SIZE(vm) (J9JAVAVM_COMPRESS_OBJECT_REFERENCES(vm) ? sizeof(J9ObjectCompressed) : sizeof(J9ObjectFull))
 #define J9JAVAVM_CONTIGUOUS_HEADER_SIZE(vm) (J9JAVAVM_COMPRESS_OBJECT_REFERENCES(vm) ? sizeof(J9IndexableObjectContiguousCompressed) : sizeof(J9IndexableObjectContiguousFull))
@@ -5370,6 +5413,11 @@ typedef struct J9CInterpreterStackFrame {
 	U_8 preservedFPRs[8 * 8]; /* v8-15 */
 	UDATA jitGPRs[32]; /* x0-x31 */
 	U_8 jitFPRs[32 * 8]; /* v0-v31 */
+#elif defined(J9VM_ARCH_RISCV) /* J9VM_ARCH_ARM */
+	UDATA preservedGPRs[13]; /* x2, x8, x9, and x18-x27  */
+	U_8 preservedFPRs[32 * 8]; /* f0-f31 */
+	UDATA jitGPRs[32]; /* x0-x31 */
+	U_8 jitFPRs[32 * 8]; /* f0-f31 */
 #elif defined(J9VM_ARCH_X86) /* J9VM_ARCH_AARCH64 */
 #if defined(J9VM_ENV_DATA64) && defined(WIN32)
 	UDATA arguments[4]; /* outgoing arguments shadow */
@@ -5449,5 +5497,7 @@ typedef struct J9CInterpreterStackFrame {
 #error Unknown architecture
 #endif /* J9VM_ARCH_X86 */
 } J9CInterpreterStackFrame;
+
+#include "objectreferencesmacros_define.inc"
 
 #endif /* J9NONBUILDER_H */

@@ -48,6 +48,7 @@
 #include "MHInterpreter.hpp"
 #include "ObjectAccessBarrierAPI.hpp"
 #include "ObjectHash.hpp"
+#include "ValueTypeHelpers.hpp"
 #include "VMHelpers.hpp"
 #include "VMAccess.hpp"
 #include "ObjectAllocationAPI.hpp"
@@ -66,10 +67,7 @@
 #if defined(DEBUG_VERSION)
 #define DO_HOOKS
 #define DO_SINGLE_STEP
-#define INTERPRETER_CLASS VM_DebugBytecodeInterpreter
-#else
-#define INTERPRETER_CLASS VM_BytecodeInterpreter
-#endif
+#endif /* DEBUG_VERSION */
 
 typedef enum {
 	VM_NO,
@@ -792,7 +790,6 @@ done:
 		if (J9_ARE_ANY_BITS_SET((UDATA)_sp, sizeof(UDATA))) {
 			_sp -= 1;
 			memmove(_sp, _sp + 1, sizeof(UDATA) * argCount);
-			returnSP |= J9_STACK_FLAGS_ARGS_ALIGNED;
 		}
 		J9I2JState *i2jState = &_currentThread->entryLocalStorage->i2jState;
 		i2jState->returnSP = (UDATA*)returnSP;
@@ -822,7 +819,7 @@ done:
 			returnPoint = jitConfig->jitExitInterpreter0;
 			break;
 		case ';':
-obj:;
+obj:
 		/* On 32-bit, object uses the "1" target (already loaded, so just break).
 		 * On 64-bit, object uses the "J" target (fall through)
 		 */
@@ -2019,40 +2016,50 @@ done:
 	}
 
 	VMINLINE VM_BytecodeAction
-	bindNative(REGISTER_ARGS_LIST)
+	resolveNativeAddressWithErrorHandling()
 	{
-		VM_BytecodeAction rc = GOTO_RUN_METHOD;
-		buildMethodFrame(REGISTER_ARGS, _sendMethod, jitStackFrameFlags(REGISTER_ARGS, 0));
-		updateVMStruct(REGISTER_ARGS);
 		UDATA bindRC = resolveNativeAddress(_currentThread, _sendMethod, TRUE);
 		if (J9_NATIVE_METHOD_BIND_OUT_OF_MEMORY == bindRC) {
 			_vm->memoryManagerFunctions->j9gc_modron_global_collect_with_overrides(_currentThread, J9MMCONSTANT_EXPLICIT_GC_NATIVE_OUT_OF_MEMORY);
 			bindRC = resolveNativeAddress(_currentThread, _sendMethod, TRUE);
 		}
-		switch(bindRC) {
-		case J9_NATIVE_METHOD_BIND_SUCCESS: {
-			VMStructHasBeenUpdated(REGISTER_ARGS);
-			J9SFMethodFrame *methodFrame = (J9SFMethodFrame*)_sp;
+
+		VM_BytecodeAction rc = GOTO_RUN_METHOD;
+		if (J9_NATIVE_METHOD_BIND_SUCCESS != bindRC) {
+			rc = GOTO_THROW_CURRENT_EXCEPTION;
+			switch(bindRC) {
+			case J9_NATIVE_METHOD_BIND_OUT_OF_MEMORY:
+				setNativeBindOutOfMemoryError(_currentThread, _sendMethod);
+				break;
+			case J9_NATIVE_METHOD_BIND_RECURSIVE:
+				setRecursiveBindError(_currentThread, _sendMethod);
+				break;
+			default:
+				setNativeNotFoundError(_currentThread, _sendMethod);
+				break;
+			}
+		}
+
+		return rc;
+	}
+
+	VMINLINE VM_BytecodeAction
+	bindNative(REGISTER_ARGS_LIST)
+	{
+		VM_BytecodeAction rc = GOTO_RUN_METHOD;
+
+		buildMethodFrame(REGISTER_ARGS, _sendMethod, jitStackFrameFlags(REGISTER_ARGS, 0));
+
+		updateVMStruct(REGISTER_ARGS);
+		rc = resolveNativeAddressWithErrorHandling();
+		VMStructHasBeenUpdated(REGISTER_ARGS);
+
+		if (GOTO_RUN_METHOD == rc) {
+			J9SFMethodFrame *methodFrame = (J9SFMethodFrame *)_sp;
 			_currentThread->jitStackFrameFlags = methodFrame->specialFrameFlags & J9_SSF_JIT_NATIVE_TRANSITION_FRAME;
-			restoreSpecialStackFrameLeavingArgs(REGISTER_ARGS, ((UDATA*)(methodFrame + 1)) - 1);
-			break;
+			restoreSpecialStackFrameLeavingArgs(REGISTER_ARGS, ((UDATA *)(methodFrame + 1)) - 1);
 		}
-		case J9_NATIVE_METHOD_BIND_OUT_OF_MEMORY:
-			setNativeBindOutOfMemoryError(_currentThread, _sendMethod);
-			VMStructHasBeenUpdated(REGISTER_ARGS);
-			rc = GOTO_THROW_CURRENT_EXCEPTION;
-			break;
-		case J9_NATIVE_METHOD_BIND_RECURSIVE:
-			setRecursiveBindError(_currentThread, _sendMethod);
-			VMStructHasBeenUpdated(REGISTER_ARGS);
-			rc = GOTO_THROW_CURRENT_EXCEPTION;
-			break;
-		default:
-			setNativeNotFoundError(_currentThread, _sendMethod);
-			VMStructHasBeenUpdated(REGISTER_ARGS);
-			rc = GOTO_THROW_CURRENT_EXCEPTION;
-			break;
-		}
+
 		return rc;
 	}
 
@@ -2265,7 +2272,7 @@ done:
 			*(U_32 *)_sp = (U_32)_currentThread->returnValue;
 		}
 		rc = EXECUTE_BYTECODE;
-done:;
+done:
 		return rc;
 	}
 
@@ -4618,8 +4625,21 @@ done:
 	outOfLineINL(REGISTER_ARGS_LIST)
 	{
 		updateVMStruct(REGISTER_ARGS);
+
 		J9OutOfLineINLMethod *target = (J9OutOfLineINLMethod *)(((UDATA)_sendMethod->extra) & ~J9_STARTPC_NOT_TRANSLATED);
-		VM_BytecodeAction rc = target(_currentThread, _sendMethod);
+		VM_BytecodeAction rc = GOTO_RUN_METHOD;
+		if (NULL == target) {
+			/* Resolve the native address and retry. */
+			rc = resolveNativeAddressWithErrorHandling();
+			if (GOTO_RUN_METHOD != rc) {
+				goto done;
+			}
+			target = (J9OutOfLineINLMethod *)(((UDATA)_sendMethod->extra) & ~J9_STARTPC_NOT_TRANSLATED);
+		}
+
+		Assert_VM_true(NULL != target);
+		rc = target(_currentThread, _sendMethod);
+done:
 		VMStructHasBeenUpdated(REGISTER_ARGS);
 		return rc;
 	}
@@ -5922,10 +5942,18 @@ done:
 					rc = THROW_ARRAY_STORE;
 				} else {
 #if defined(J9VM_OPT_VALHALLA_VALUE_TYPES)
-					J9Class *arrayrefClass = J9OBJECT_CLAZZ(_currentThread, arrayref);
-					if (J9_IS_J9CLASS_FLATTENED(arrayrefClass)) {
-						_objectAccessBarrier.copyObjectFieldsToFlattenedArrayElement(_currentThread, (J9ArrayClass *) arrayrefClass, value, (J9IndexableObject *) arrayref, index);
-					} else 
+					J9ArrayClass *arrayrefClass = (J9ArrayClass *) J9OBJECT_CLAZZ(_currentThread, arrayref);
+					if (J9_IS_J9CLASS_VALUETYPE(arrayrefClass->componentType)) {
+						if (NULL == value) {
+							rc = THROW_NPE;
+							goto done;
+						}
+						if (J9_IS_J9CLASS_FLATTENED(arrayrefClass)) {
+							_objectAccessBarrier.copyObjectFieldsToFlattenedArrayElement(_currentThread, arrayrefClass, value, (J9IndexableObject *) arrayref, index);
+						} else {
+							_objectAccessBarrier.inlineIndexableObjectStoreObject(_currentThread, arrayref, index, value);
+						}
+					} else
 #endif /* if defined(J9VM_OPT_VALHALLA_VALUE_TYPES) */
 					{
 						_objectAccessBarrier.inlineIndexableObjectStoreObject(_currentThread, arrayref, index, value);
@@ -5935,6 +5963,9 @@ done:
 				}
 			}
 		}
+#if defined(J9VM_OPT_VALHALLA_VALUE_TYPES)
+done:
+#endif /* if defined(J9VM_OPT_VALHALLA_VALUE_TYPES) */
 		return rc;
 	}
 
@@ -7301,56 +7332,6 @@ done:
 		return rc;
 	}
 
-	/*
-	 * Determine if the two objects are substitutable
-	 *
-	 * @param[in] lhs the lhs object of acmp bytecodes
-	 * @param[in] rhs the rhs object of acmp bytecodes
-	 * return true if they are substitutable and false otherwise
-	 */
-	VMINLINE bool
-	acmp(j9object_t lhs, j9object_t rhs)
-	{
-#if defined(J9VM_OPT_VALHALLA_VALUE_TYPES)
-		bool acmpResult = false;
-		if (rhs == lhs) {
-			acmpResult = true;
-		} else if ((NULL == rhs) || (NULL == lhs)) {
-			acmpResult = false;
-		} else {
-			J9Class * lhsClass = J9OBJECT_CLAZZ(_currentThread, lhs);
-			J9Class * rhsClass = J9OBJECT_CLAZZ(_currentThread, rhs);
-			if ((J9_IS_J9CLASS_VALUETYPE(rhsClass)
-				&& J9_IS_J9CLASS_VALUETYPE(lhsClass))
-				&& (rhsClass == lhsClass)
-			) {
-				acmpResult = isSubstitutable(lhs, rhs);
-			}
-		}
-		return acmpResult;
-#else /* J9VM_OPT_VALHALLA_VALUE_TYPES */
-		return (rhs == lhs);
-#endif /* J9VM_OPT_VALHALLA_VALUE_TYPES */
-	}
-
-#if defined(J9VM_OPT_VALHALLA_VALUE_TYPES)
-	/*
-	 * Determine if the two valueTypes are substitutable when rhs.class equals lhs.class
-	 *
-	 * @param[in] lhs the lhs object of acmp bytecodes and it's a valueType
-	 * @param[in] rhs the rhs object of acmp bytecodes and it's a valueType
-	 * return true if they are substitutable and false otherwise
-	 */
-	VMINLINE bool
-	isSubstitutable(j9object_t lhs, j9object_t rhs)
-	{
-		/*
-		 * TODO: this will be updated in a future PR.
-		 */
-		return false;
-	}
-#endif /* J9VM_OPT_VALHALLA_VALUE_TYPES */
-
 	/* ..., lhs, rhs => ... */
 	VMINLINE VM_BytecodeAction
 	ifacmpeq(REGISTER_ARGS_LIST)
@@ -7360,7 +7341,7 @@ done:
 		j9object_t lhs = *(j9object_t*)(_sp + 1);
 		U_8 *profilingCursor = startProfilingRecord(REGISTER_ARGS, sizeof(U_8));
 		_sp += 2;
-		if(acmp(lhs, rhs)) {
+		if(VM_ValueTypeHelpers::acmp(_currentThread, _objectAccessBarrier, lhs, rhs)) {
 			_pc += *(I_16*)(_pc + 1);
 			if (NULL != profilingCursor) {
 				*profilingCursor = 1;
@@ -7384,7 +7365,7 @@ done:
 		j9object_t lhs = *(j9object_t*)(_sp + 1);
 		U_8 *profilingCursor = startProfilingRecord(REGISTER_ARGS, sizeof(U_8));
 		_sp += 2;
-		if(!acmp(lhs, rhs)) {
+		if(!VM_ValueTypeHelpers::acmp(_currentThread, _objectAccessBarrier, lhs, rhs)) {
 			_pc += *(I_16*)(_pc + 1);
 			if (NULL != profilingCursor) {
 				*profilingCursor = 1;
@@ -8497,7 +8478,8 @@ retry:
 				goto done;
 			}
 
-			copyObjectRef = _objectAllocate.inlineAllocateObject(_currentThread, objectRefClass, false, false);
+			/* need to zero memset the memory so padding bytes are zeroed for memcmp-like comparisons */
+			copyObjectRef = _objectAllocate.inlineAllocateObject(_currentThread, objectRefClass, true, false);
 			if (NULL == copyObjectRef) {
 				buildGenericSpecialStackFrame(REGISTER_ARGS, 0);
 				pushObjectInSpecialFrame(REGISTER_ARGS, originalObjectRef);
@@ -8552,7 +8534,7 @@ protected:
 
 public:
 
-#if ((defined(WIN32) && defined(__clang__)) || ((defined(J9VM_ARCH_X86) || defined(S390)) && defined(__GNUC__) && ((__GNUC__ > 4) || ((__GNUC__ == 4) && (__GNUC_MINOR__ > 6)))))
+#if ((defined(WIN32) && defined(__clang__)) || ((defined(J9VM_ARCH_X86) || defined(S390) || defined(J9VM_ARCH_RISCV)) && defined(__GNUC__) && ((__GNUC__ > 4) || ((__GNUC__ == 4) && (__GNUC_MINOR__ > 6)))))
 	/*
 	 * This method can't be 'VMINLINE' because it declares local static data
 	 * triggering a warning with GCC compilers newer than 4.6.

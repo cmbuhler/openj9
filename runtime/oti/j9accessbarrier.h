@@ -158,53 +158,57 @@ typedef struct J9IndexableObject* mm_j9array_t;
 	(void)0)
 #define J9OBJECT__PRE_OBJECT_STORE_ADDRESS(vmThread, object, address, value) \
 	(\
-	((OMR_GC_WRITE_BARRIER_TYPE_SATB == (J9VMTHREAD_JAVAVM((vmThread)))->gcWriteBarrierType) || \
-	(OMR_GC_WRITE_BARRIER_TYPE_SATB_AND_OLDCHECK == (J9VMTHREAD_JAVAVM((vmThread)))->gcWriteBarrierType)) ? \
+	((OMR_GC_WRITE_BARRIER_TYPE_ALWAYS <= J9VMTHREAD_JAVAVM((vmThread))->gcWriteBarrierType) && \
+	(J9VMTHREAD_JAVAVM((vmThread))->gcWriteBarrierType <= OMR_GC_WRITE_BARRIER_TYPE_SATB_AND_OLDCHECK)) ? \
 	J9VMTHREAD_JAVAVM((vmThread))->memoryManagerFunctions->J9MetronomeWriteBarrierStore((vmThread), (j9object_t)(object), (fj9object_t*)(address), (j9object_t)(value)) : \
 	(void)0 \
 	)
 #define J9OBJECT__PRE_OBJECT_STORE_ADDRESS_VM(javaVM, object, address, value) \
 	(\
-	((OMR_GC_WRITE_BARRIER_TYPE_SATB == javaVM->gcWriteBarrierType) || \
-	(OMR_GC_WRITE_BARRIER_TYPE_SATB_AND_OLDCHECK == javaVM->gcWriteBarrierType)) ? \
+	((OMR_GC_WRITE_BARRIER_TYPE_ALWAYS <= javaVM->gcWriteBarrierType) && \
+	(javaVM->gcWriteBarrierType <= OMR_GC_WRITE_BARRIER_TYPE_SATB_AND_OLDCHECK)) ? \
 	javaVM->memoryManagerFunctions->J9MetronomeWriteBarrierStore(J9JAVAVM_VMTHREAD(javaVM), (j9object_t)(object), (fj9object_t*)(address), (j9object_t)(value)) : \
 	(void)0 \
 	)
 #define J9OBJECT__POST_OBJECT_STORE_ADDRESS(vmThread, object, address, value) \
 	(\
-	(OMR_GC_ALLOCATION_TYPE_SEGREGATED != (J9VMTHREAD_JAVAVM((vmThread)))->gcAllocationType) ? \
+	((OMR_GC_WRITE_BARRIER_TYPE_OLDCHECK <= J9VMTHREAD_JAVAVM((vmThread))->gcWriteBarrierType) && \
+	(J9VMTHREAD_JAVAVM((vmThread))->gcWriteBarrierType <= OMR_GC_WRITE_BARRIER_TYPE_ALWAYS)) ? \
 	J9VMTHREAD_JAVAVM((vmThread))->memoryManagerFunctions->J9WriteBarrierStore((vmThread), (j9object_t)(object), (j9object_t)(value)) : \
 	(void)0 \
 	)
 #define J9OBJECT__POST_OBJECT_STORE_ADDRESS_VM(javaVM, object, address, value) \
 	(\
-	(OMR_GC_ALLOCATION_TYPE_SEGREGATED == javaVM->gcAllocationType) ? \
+	((OMR_GC_WRITE_BARRIER_TYPE_OLDCHECK <= javaVM->gcWriteBarrierType) && \
+	(javaVM->gcWriteBarrierType <= OMR_GC_WRITE_BARRIER_TYPE_ALWAYS)) ? \
 	javaVM->memoryManagerFunctions->J9WriteBarrierStore(J9JAVAVM_VMTHREAD(javaVM), (j9object_t)(object), (j9object_t)(value)) : \
 	(void)0 \
 	)
 #define J9STATIC__PRE_OBJECT_STORE(vmThread, clazz, address, value) \
 	(\
-	((OMR_GC_WRITE_BARRIER_TYPE_SATB == (J9VMTHREAD_JAVAVM((vmThread)))->gcWriteBarrierType) || \
-	(OMR_GC_WRITE_BARRIER_TYPE_SATB_AND_OLDCHECK == (J9VMTHREAD_JAVAVM((vmThread)))->gcWriteBarrierType)) ? \
+	((OMR_GC_WRITE_BARRIER_TYPE_ALWAYS <= J9VMTHREAD_JAVAVM((vmThread))->gcWriteBarrierType) && \
+	(J9VMTHREAD_JAVAVM((vmThread))->gcWriteBarrierType <= OMR_GC_WRITE_BARRIER_TYPE_SATB_AND_OLDCHECK)) ? \
 	J9VMTHREAD_JAVAVM((vmThread))->memoryManagerFunctions->J9MetronomeWriteBarrierJ9ClassStore((vmThread), J9VM_J9CLASS_TO_HEAPCLASS((clazz)), (j9object_t*)(address), (j9object_t)(value)) : \
 	(void)0 \
 	)
 #define J9STATIC__PRE_OBJECT_STORE_VM(javaVM, object, address, value) \
 	(\
-	((OMR_GC_WRITE_BARRIER_TYPE_SATB == javaVM->gcWriteBarrierType) || \
-	(OMR_GC_WRITE_BARRIER_TYPE_SATB_AND_OLDCHECK == javaVM->gcWriteBarrierType)) ? \
+	((OMR_GC_WRITE_BARRIER_TYPE_ALWAYS <= javaVM->gcWriteBarrierType) && \
+	(javaVM->gcWriteBarrierType <= OMR_GC_WRITE_BARRIER_TYPE_SATB_AND_OLDCHECK)) ? \
 	javaVM->memoryManagerFunctions->J9MetronomeWriteBarrierJ9ClassStore(J9JAVAVM_VMTHREAD(javaVM), J9VM_J9CLASS_TO_HEAPCLASS((clazz)), (j9object_t*)(address), (j9object_t)(value)) : \
 	(void)0 \
 	)
 #define J9STATIC__POST_OBJECT_STORE(vmThread, clazz, address, value) \
 	(\
-	(OMR_GC_ALLOCATION_TYPE_SEGREGATED != (J9VMTHREAD_JAVAVM((vmThread)))->gcAllocationType) ? \
+	((OMR_GC_WRITE_BARRIER_TYPE_OLDCHECK <= J9VMTHREAD_JAVAVM((vmThread))->gcWriteBarrierType) && \
+	(J9VMTHREAD_JAVAVM((vmThread))->gcWriteBarrierType <= OMR_GC_WRITE_BARRIER_TYPE_ALWAYS)) ? \
 	J9VMTHREAD_JAVAVM((vmThread))->memoryManagerFunctions->J9WriteBarrierJ9ClassStore((vmThread), (clazz), (j9object_t)(value)) : \
 	(void)0 \
 	)
 #define J9STATIC__POST_OBJECT_STORE_VM(javaVM, clazz, address, value) \
 	(\
-	(OMR_GC_ALLOCATION_TYPE_SEGREGATED != javaVM->gcAllocationType) ? \
+	((OMR_GC_WRITE_BARRIER_TYPE_OLDCHECK <= javaVM->gcWriteBarrierType) && \
+	(javaVM->gcWriteBarrierType <= OMR_GC_WRITE_BARRIER_TYPE_ALWAYS)) ? \
 	javaVM->memoryManagerFunctions->J9WriteBarrierJ9ClassStore(J9JAVAVM_VMTHREAD(javaVM), (clazz), (j9object_t)(value)) : \
 	(void)0 \
 	)
@@ -557,18 +561,18 @@ typedef struct J9IndexableObject* mm_j9array_t;
 #endif /* defined (J9VM_GC_ALWAYS_CALL_OBJECT_ACCESS_BARRIER) */
 
 #if defined (J9VM_GC_ALWAYS_CALL_OBJECT_ACCESS_BARRIER)
-#define J9MONITORTABLE_OBJECT_LOAD(vmThread, objectSlot) ((j9object_t)J9VMTHREAD_JAVAVM(vmThread)->memoryManagerFunctions->j9gc_objaccess_monitorTableReadObject((vmThread), (j9object_t *)(objectSlot)))
-#define J9MONITORTABLE_OBJECT_LOAD_VM(javaVM, objectSlot) ((j9object_t)(javaVM)->memoryManagerFunctions->j9gc_objaccess_monitorTableReadObjectVM(javaVM, (j9object_t *)(objectSlot)))
+#define J9WEAKROOT_OBJECT_LOAD(vmThread, objectSlot) ((j9object_t)J9VMTHREAD_JAVAVM(vmThread)->memoryManagerFunctions->j9gc_weakRoot_readObject((vmThread), (j9object_t *)(objectSlot)))
+#define J9WEAKROOT_OBJECT_LOAD_VM(javaVM, objectSlot) ((j9object_t)(javaVM)->memoryManagerFunctions->j9gc_weakRoot_readObjectVM(javaVM, (j9object_t *)(objectSlot)))
 #else /* J9VM_GC_ALWAYS_CALL_OBJECT_ACCESS_BARRIER */
-#define J9MONITORTABLE_OBJECT_LOAD(vmThread, objectSlot) \
+#define J9WEAKROOT_OBJECT_LOAD(vmThread, objectSlot) \
 		((J9_GC_READ_BARRIER_TYPE_NONE == (vmThread)->javaVM->gcReadBarrierType) ? \
 		(*(j9object_t *)(objectSlot)) : \
-		((j9object_t)J9VMTHREAD_JAVAVM(vmThread)->memoryManagerFunctions->j9gc_objaccess_monitorTableReadObject((vmThread), (j9object_t *)(objectSlot))))
+		((j9object_t)J9VMTHREAD_JAVAVM(vmThread)->memoryManagerFunctions->j9gc_weakRoot_readObject((vmThread), (j9object_t *)(objectSlot))))
 
-#define J9MONITORTABLE_OBJECT_LOAD_VM(javaVM, objectSlot) \
+#define J9WEAKROOT_OBJECT_LOAD_VM(javaVM, objectSlot) \
 		((J9_GC_READ_BARRIER_TYPE_NONE == (javaVM)->gcReadBarrierType) ? \
 		(*(j9object_t *)(objectSlot)) : \
-		((j9object_t)(javaVM)->memoryManagerFunctions->j9gc_objaccess_monitorTableReadObjectVM(javaVM, (j9object_t *)(objectSlot))))
+		((j9object_t)(javaVM)->memoryManagerFunctions->j9gc_weakRoot_readObjectVM(javaVM, (j9object_t *)(objectSlot))))
 
 #endif /* J9VM_GC_ALWAYS_CALL_OBJECT_ACCESS_BARRIER */
 
