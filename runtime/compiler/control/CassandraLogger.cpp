@@ -24,7 +24,7 @@ CassandraLogger::CassandraLogger(const char *databaseIP, uint32_t databasePort,
 bool CassandraLogger::createKeySpace() 
    {
    char queryString[256]; 
-   snprintf(queryString, 256, "CREATE KEYSPACE IF NOT EXISTS %s  WITH REPLICATION = {'class':'SimpleStrategy','replication_factor':1};", _databaseName); 
+   snprintf(queryString, 256, "CREATE KEYSPACE IF NOT EXISTS %s  WITH REPLICATION = {'class':'SimpleStrategy','replication_factor':1};", _databaseName);
    OCassStatement* statement = Ocass_statement_new(queryString, 0);
 
    OCassFuture* queryFuture = Ocass_session_execute(_session, statement);
