@@ -82,7 +82,10 @@
 #include "runtime/JITServerIProfiler.hpp"
 #include "runtime/JITServerStatisticsThread.hpp"
 #include "runtime/Listener.hpp"
-#endif
+#if defined(MONGO_LOGGER)
+#include "control/LoadDBLibs.hpp"
+#endif // defined(MONGO_LOGGER)
+#endif // defined(J9VM_OPT_JITSERVER)
 
 extern "C" {
 struct J9JavaVM;
@@ -4090,6 +4093,11 @@ void JitShutdown(J9JITConfig * jitConfig)
          fprintf(stderr, "Failed to dump Final Method Names and Counts\n");
          }
       }
+
+#if defined(J9VM_OPT_JITSERVER) && defined(MONGO_LOGGER)
+   if(compInfo->getPersistentInfo()->getJITServerPersistentLogging())
+      JITServer::cleanupMongoC();
+#endif //J9VM_OPT_JITSERVER && MONGO_LOGGER
 
    TR::Compilation::shutdown(vm);
 

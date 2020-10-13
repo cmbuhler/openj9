@@ -33,6 +33,18 @@ j9jit_files(
 )
 
 if(J9VM_OPT_JITSERVER)
+	if(${PERSISTENT_LOGGER} STREQUAL "MONGODB")
+		j9jit_files(
+				control/MongoLogger.cpp
+				control/LoadDBLibs.cpp
+		)
+	endif()
+	if(${PERSISTENT_LOGGER} STREQUAL "CASSANDRA")
+		j9jit_files(
+				control/CassandraLogger.cpp
+				control/LoadDBLibs.cpp
+		)
+	endif()
 	j9jit_files(
 		control/JITClientCompilationThread.cpp
 		control/JITServerCompilationThread.cpp

@@ -133,6 +133,18 @@ class PersistentInfo : public OMR::PersistentInfoConnector
          _remoteCompilationMode(JITServer::NONE),
          _JITServerAddress("localhost"),
          _JITServerPort(38400),
+#if defined(MONGO_LOGGER) || defined(CASSANDRA_LOGGER)
+         _JITServerPersistentLogging(false),
+         #if defined(CASSANDRA_LOGGER)
+         _JITServerPersistentLoggingDatabasePort(9042),
+         #elif defined(MONGO_LOGGER)
+         _JITServerPersistentLoggingDatabasePort(27017),
+         #endif //MONGO_LOGGER elif CASSANDRA_LOGGER
+         _JITServerPersistentLoggingDatabaseAddress("127.0.0.1"),
+         _JITServerPersistentLoggingDatabaseUsername("admin"),
+         _JITServerPersistentLoggingDatabaseName("jitserver_logs"),
+         _JITServerPersistentLoggingDatabasePassword("password"),
+#endif /* defined(MONGO_LOGGER) || defined(CASSANDRA_LOGGER) */
          _socketTimeoutMs(2000),
          _clientUID(0),
 #endif /* defined(J9VM_OPT_JITSERVER) */
@@ -307,6 +319,20 @@ class PersistentInfo : public OMR::PersistentInfoConnector
    void setJITServerPort(uint32_t port) { _JITServerPort = port; }
    uint64_t getClientUID() const { return _clientUID; }
    void setClientUID(uint64_t val) { _clientUID = val; }
+#if defined(MONGO_LOGGER) || defined(CASSANDRA_LOGGER)
+   void setJITServerPersistentLogging(bool enable) { _JITServerPersistentLogging = enable; }
+   bool getJITServerPersistentLogging() const { return _JITServerPersistentLogging; }
+   void setJITServerPersistentLoggingDatabasePort(uint32_t port) { _JITServerPersistentLoggingDatabasePort = port; }
+   uint32_t getJITServerPersistentLoggingDatabasePort() const { return _JITServerPersistentLoggingDatabasePort; }
+   void setJITServerPersistentLoggingDatabaseAddress(char *addr) { _JITServerPersistentLoggingDatabaseAddress = addr; }
+   const char *getJITServerPersistentLoggingDatabaseAddress() const { return _JITServerPersistentLoggingDatabaseAddress; }
+   void setJITServerPersistentLoggingDatabaseUsername(char *username) { _JITServerPersistentLoggingDatabaseUsername = username; }
+   const char *getJITServerPersistentLoggingDatabaseUsername() const { return _JITServerPersistentLoggingDatabaseUsername; }
+   void setJITServerPersistentLoggingDatabasePassword(char *password) { _JITServerPersistentLoggingDatabasePassword = password; }
+   const char *getJITServerPersistentLoggingDatabasePassword() const { return _JITServerPersistentLoggingDatabasePassword; }
+   void setJITServerPersistentLoggingDatabaseName(char *name) { _JITServerPersistentLoggingDatabaseName = name; }
+   const char *getJITServerPersistentLoggingDatabaseName() const { return _JITServerPersistentLoggingDatabaseName; }
+#endif /* defined(defined(MONGO_LOGGER) || defined(CASSANDRA_LOGGER) */
 #endif /* defined(J9VM_OPT_JITSERVER) */
 
    private:
@@ -397,6 +423,14 @@ class PersistentInfo : public OMR::PersistentInfoConnector
    uint32_t    _JITServerPort;
    uint32_t    _socketTimeoutMs; // timeout for communication sockets used in out-of-process JIT compilation
    uint64_t    _clientUID;
+#if defined(MONGO_LOGGER) || defined(CASSANDRA_LOGGER)
+   bool        _JITServerPersistentLogging;
+   const char* _JITServerPersistentLoggingDatabaseAddress;
+   const char* _JITServerPersistentLoggingDatabaseUsername;
+   const char* _JITServerPersistentLoggingDatabasePassword;
+   const char* _JITServerPersistentLoggingDatabaseName;
+   uint32_t    _JITServerPersistentLoggingDatabasePort;
+#endif
 #endif /* defined(J9VM_OPT_JITSERVER) */
    };
 
